@@ -1,0 +1,66 @@
+{
+  "slug": "airhelp",
+  "name": "AirHelp",
+  "domain": "airhelp.com",
+  "category": "travel",
+  "subcategory": "flight compensation and passenger-rights claims",
+  "tagline": "Pursue passenger compensation for delayed, canceled, or overbooked flights",
+  "priceMonthly": null,
+  "pricing": {
+    "plan": "No Win, No Fee",
+    "basis": "percentage of recovered flight compensation",
+    "unit": "usage",
+    "native": "35% of compensation; an additional 15% applies if legal action is required",
+    "source": "https://www.airhelp.com/en-int/our-fees/",
+    "checkedOn": "2026-08-03",
+    "confidence": "high",
+    "notes": "AirHelp deducts a 35% service fee from recovered compensation. If legal action is required, it deducts an additional 15%."
+  },
+  "verdict": "kinda",
+  "verdictConfidence": "high",
+  "verdictSummary": "A useful personal organizer is buildable, but AirHelp is more than the visible intake form. A local app can assess EC261 and UK261 eligibility, organize evidence, draft letters, and track deadlines. It cannot responsibly reproduce AirHelp's managed airline correspondence, cross-jurisdictional legal judgment, funded court action, and professional accountability in one sitting. This is a credible personal substitute for straightforward self-service claims, not a full replacement.",
+  "coreLoopDIY": "Assess EC261 and UK261 eligibility, organize journey facts and evidence, estimate compensation, generate draft letters, and track submission and escalation deadlines locally.",
+  "diyTimeEstimate": "weekend to multi-day",
+  "requirements": [
+    "Node.js 22",
+    "modern browser",
+    "SQLite",
+    "user-entered flight, passenger, and evidence data",
+    "current official passenger-rights sources"
+  ],
+  "whatYouLose": [
+    "AirHelp staff handling airline correspondence and negotiation",
+    "case-specific legal judgment across jurisdictions",
+    "lawyer access and funded legal action under a no-win, no-fee model",
+    "commercial flight, weather, and disruption data used to validate claims",
+    "professional support and accountability when a claim becomes contested"
+  ],
+  "moatTags": [
+    "compliance-regulatory",
+    "brand-trust",
+    "integrations"
+  ],
+  "moatNotes": "legal judgment/airline handling/court funding",
+  "whyPeopleStillPay": "People pay AirHelp to transfer the work, uncertainty, follow-up, and legal escalation to a specialist on a no-win, no-fee basis. A local tool can organize a straightforward self-service claim, but it does not negotiate with the airline, fund litigation, or take professional responsibility for a contested case.",
+  "priorArt": [
+    {
+      "name": "ClaimSolo",
+      "url": "https://github.com/codecube/ClaimSolo",
+      "desc": "Open-source, local-first personal workspace for assessing, documenting, and tracking EC261 and UK261 flight claims."
+    }
+  ],
+  "alternatives": [],
+  "rejectedAlternatives": [
+    {
+      "name": "ClaimSolo",
+      "url": "https://github.com/codecube/ClaimSolo",
+      "desc": "Exactly the right workflow, but it is an 11-commit source checkout with two stars and no installer."
+    }
+  ],
+  "relatedSlugs": [],
+  "pagePriority": 4,
+  "verifiedOneShot": false,
+  "notes": "ClaimSolo is working proof of a personal self-service organizer, not a verified one-prompt reproduction of the managed claims service.",
+  "prompt": "Build me a local flight-compensation claim organizer to replace AirHelp for self-service claims. Requirements:\n\n- Node 22 + Express + better-sqlite3, server-rendered pages on localhost, no frontend\n  framework; all data in one SQLite file plus a local uploads folder.\n- Model passengers, bookings, multi-segment journeys, disruptions (delay, cancellation,\n  denied boarding, missed connection), claims, evidence files, and deadlines.\n- Deterministic EC261 and UK261 eligibility rules in one versioned rules module: given\n  the journey facts, output eligible / not eligible / needs manual review, the\n  compensation band (250/400/600 EUR distance tiers), and the article relied on.\n  Show which facts triggered which rule branch.\n- Compute great-circle distance from airport coordinates and timezone-safe arrival\n  delay from user-entered flight details; no commercial flight-data API.\n- Attach evidence (tickets, emails, receipts) as local files on a chronological\n  claim timeline.\n- Generate editable draft letters to the airline and the national enforcement body\n  from templates; never send anything automatically.\n- Track stages (preparing, submitted, escalated to authority or ADR, resolved) with\n  due dates, exported as an ICS file for my calendar.\n- Export a whole claim as JSON and Markdown so nothing is trapped in the app.\n- Say plainly in the UI and README: decision support, not legal advice; verify\n  current rules and limitation periods yourself.\n- Out of scope: automatic submission, airline negotiation, lawyer engagement, court\n  filing, accounts, sync. The staff, legal funding, and accountability are the part\n  you cannot build.\n- README: setup, where data lives, backup by copying the SQLite file and uploads.",
+  "promptCurated": true
+}
