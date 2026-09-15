@@ -8,6 +8,15 @@ importers:
 
   .:
     devDependencies:
+      '@caniclone/database':
+        specifier: workspace:*
+        version: link:packages/database
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
       turbo:
         specifier: ^2.10.13
         version: 2.10.13
