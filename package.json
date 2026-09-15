@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev" :"turbo dev",
-    "build": "turbo build"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "import:apps": "tsx scripts/import-apps.ts"
   },
   "packageManager": "pnpm@10.33.0",
   "devDependencies": {
+    "@caniclone/database": "workspace:*",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.23.13",
     "turbo": "^2.10.13"
   }
 }
