@@ -1,5 +1,5 @@
 {
-  "name": "@monorepo-setup/api",
+  "name": "@caniclone/api",
   "version": "1.0.0",
   "main": "./dist/index.js",
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
-    "@monorepo-setup/utils": "workspace:*",
+    "@caniclone/utils": "workspace:*",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
   },

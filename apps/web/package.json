@@ -1,5 +1,5 @@
 {
-  "name": "web",
+  "name": "@caniclone/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@monorepo-setup/utils": "workspace:*",
+    "@caniclone/utils": "workspace:*",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8"

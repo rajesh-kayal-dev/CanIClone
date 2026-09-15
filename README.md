@@ -30,7 +30,7 @@ monorepo/
 ## 1. Clone
 
 ```bash
-git clone git@github.com:rajesh-kayal-dev/monorepo-setup.git <project-name>
+git clone git@github.com:rajesh-kayal-dev/caniclone.git <project-name>
 cd <project-name>
 ```
 
@@ -66,8 +66,8 @@ Example:
 For scoped packages, update:
 
 ```text
-@monorepo-setup/utils
-@monorepo-setup/api
+@caniclone/utils
+@caniclone/api
 ```
 
 to your project name if needed.
@@ -137,7 +137,7 @@ pnpm --filter web dev
 Run only the API:
 
 ```bash
-pnpm --filter @monorepo-setup/api dev
+pnpm --filter @caniclone/api dev
 ```
 
 Add a package to the web app:
@@ -149,7 +149,7 @@ pnpm --filter web add <package>
 Add a package to the API:
 
 ```bash
-pnpm --filter @monorepo-setup/api add <package>
+pnpm --filter @caniclone/api add <package>
 ```
 
 Add a development package:

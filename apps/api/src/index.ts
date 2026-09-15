@@ -1,6 +1,6 @@
 import dotenv from "dotenv"
 import express from "express";
-import {formatCurrency} from "@monorepo-setup/utils";
+import {formatCurrency} from "@caniclone/utils";
 
 dotenv.config();
 
