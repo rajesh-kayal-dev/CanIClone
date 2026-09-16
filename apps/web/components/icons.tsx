@@ -1,3 +1,5 @@
+import { forwardRef } from 'react';
+
 import {
   IconAdjustmentsHorizontal,
   IconAlertCircle,
@@ -26,7 +28,6 @@ import {
   IconClipboardText,
   IconClock,
   IconCode,
-  IconCommand,
   IconCreditCard,
   IconDeviceLaptop,
   IconDots,
@@ -87,10 +88,40 @@ import {
   IconVideo,
   IconCrown,
   IconX,
+  IconMenu,
   type IconProps
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
+
+export const IconCanIClone = forwardRef<SVGSVGElement, IconProps>(
+  function IconCanIClone({ color = 'currentColor', size = 24, stroke = 2, title, className, children, ...rest }, ref) {
+    return (
+      <svg
+        ref={ref}
+        xmlns='http://www.w3.org/2000/svg'
+        width={size}
+        height={size}
+        viewBox='0 0 24 24'
+        fill='none'
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        className={['tabler-icon', 'tabler-icon-caniclone-logo', className].join(' ')}
+        {...rest}
+      >
+        {title ? <title>{title}</title> : null}
+        <path d='M4 8a3.5 3 0 0 1 3.5 -3h1a3.5 3 0 0 1 3.5 3a3 3 0 0 1 -2 3a3 4 0 0 0 -2 4' />
+        <path d='M8 19v.01' />
+        <path d='M17 15v-10' />
+        <path d='M17 19v.01' />
+        {children}
+      </svg>
+    );
+  }
+);
+IconCanIClone.displayName = 'IconCanIClone';
 
 export const Icons = {
   // General
@@ -140,7 +171,7 @@ export const Icons = {
   // Brand
   github: IconBrandGithub,
   twitter: IconBrandTwitter,
-  logo: IconCommand,
+  logo: IconCanIClone,
 
   // Communication
   chat: IconMessage,
@@ -219,5 +250,7 @@ export const Icons = {
   slash: IconSlash,
   calendar: IconCalendar,
   galleryVerticalEnd: IconStack2,
-  moreHorizontal: IconDots
+  moreHorizontal: IconDots,
+  menu: IconMenu,
+  star: IconStar
 };

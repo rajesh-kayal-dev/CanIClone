@@ -16,7 +16,7 @@ import { Icons } from '../icons';
 import { Kbd } from '@/components/ui/kbd';
 import { THEMES } from './theme.config';
 
-export function ThemeSelector() {
+export function ThemeSelector({ compact }: { compact?: boolean } = {}) {
   const { activeTheme, setActiveTheme } = useThemeConfig();
 
   return (
@@ -33,14 +33,18 @@ export function ThemeSelector() {
       >
         <SelectTrigger
           id='theme-selector'
-          className='justify-start *:data-[slot=select-value]:w-24'
+          className={compact ? 'w-6 h-6 px-0 flex justify-center items-center [&>span]:w-auto border-none shadow-none bg-transparent hover:bg-muted/50 [&>span:last-child]:hidden' : 'justify-start *:data-[slot=select-value]:w-24'}
         >
-          <span className='text-muted-foreground hidden sm:block'>
-            <Icons.palette />
+          <span className={compact ? 'text-muted-foreground' : 'text-muted-foreground hidden sm:block'}>
+            {compact ? <Icons.chevronDown className='size-3.5' /> : <Icons.palette />}
           </span>
-          <span className='text-muted-foreground block sm:hidden'>Theme</span>
-          <SelectValue placeholder='Select a theme' />
-          <Kbd>T T</Kbd>
+          {!compact && (
+            <>
+              <span className='text-muted-foreground block sm:hidden'>Theme</span>
+              <SelectValue placeholder='Select a theme' />
+              <Kbd>T T</Kbd>
+            </>
+          )}
         </SelectTrigger>
         <SelectContent align='end'>
           {THEMES.length > 0 && (

@@ -5,7 +5,7 @@ import { VerdictBadge } from '@/components/shared/verdict-badge';
 import { ConfidenceBar } from '@/components/shared/confidence-bar';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { AppRecord } from '@/features/apps/data/apps';
+import type { AppRecord } from '@/lib/api/types';
 import { getCategoryLabel } from '@/features/categories/data/categories';
 
 export function AlternativeRow({ app }: { app: AppRecord }) {

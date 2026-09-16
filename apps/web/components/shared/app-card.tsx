@@ -11,7 +11,8 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { formatVotes, type AppRecord } from '@/features/apps/data/apps';
+import { formatVotes } from '@/lib/api/format';
+import type { AppRecord } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
 
 export function AppCard({ app, className }: { app: AppRecord; className?: string }) {
