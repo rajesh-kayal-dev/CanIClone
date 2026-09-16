@@ -9,6 +9,9 @@ export default defineConfig({
   },
 
   datasource: {
-    url: env("DATABASE_URL"),
+    // Migrations/CLI use the DIRECT_URL (non-pooler) Neon endpoint so that
+    // sessions and DDL (shadow DB, CREATE EXTENSION, ALTER TABLE) work.
+    // The application runtime keeps using the pooled DATABASE_URL.
+    url: env("DIRECT_URL"),
   },
 });

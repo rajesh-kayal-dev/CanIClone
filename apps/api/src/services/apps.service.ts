@@ -1,4 +1,4 @@
-import { prisma } from "@caniclone/database";
+import { prisma, hybridSearchApps } from "@caniclone/database";
 
 export async function getApps() {
   return prisma.app.findMany({
@@ -62,42 +62,5 @@ export async function getCategories() {
 }
 
 export async function searchApps(query: string) {
-  return prisma.app.findMany({
-    where: {
-      OR: [
-        {
-          name: {
-            contains: query,
-            mode: "insensitive",
-          },
-        },
-        {
-          tagline: {
-            contains: query,
-            mode: "insensitive",
-          },
-        },
-        {
-          category: {
-            contains: query,
-            mode: "insensitive",
-          },
-        },
-      ],
-    },
-    orderBy: {
-      name: "asc",
-    },
-    take: 20,
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      domain: true,
-      category: true,
-      tagline: true,
-      verdict: true,
-      priceMonthly: true,
-    },
-  });
+  return hybridSearchApps(query, { limit: 20 });
 }
