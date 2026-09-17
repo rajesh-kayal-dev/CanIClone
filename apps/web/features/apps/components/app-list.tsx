@@ -55,7 +55,7 @@ export function AppList({ apps, categories = [], className }: AppListProps) {
     } else {
       params.set(key, value);
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }, [searchParams, pathname, router]);
 
   const setSelectedCategory = (val: string) => {

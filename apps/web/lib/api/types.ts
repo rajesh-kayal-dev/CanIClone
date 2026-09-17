@@ -92,3 +92,36 @@ export interface AppRecord {
   alternatives: string[];
   tags: string[];
 }
+
+export interface ApiMarketTrend {
+  id: string;
+  appId: string;
+  source: string;
+  query: string;
+  trendDirection: 'RISING' | 'STABLE' | 'FALLING' | null;
+  growthPercent: number | null;
+  currentInterest: number | null;
+  averageInterest: number | null;
+  timelineData: unknown | null;
+  regionalData: unknown | null;
+  relatedQueries: unknown | null;
+  fetchedAt: string;
+  app?: {
+    name: string;
+    slug: string;
+    category?: string;
+    domain?: string | null;
+  };
+}
+
+export interface ApiTrendsTopChart {
+  chart: string;
+  data?: unknown;
+  error?: string;
+}
+
+export interface ApiTrendsAppData {
+  identifier: string;
+  growth: unknown;
+  timeSeries: unknown;
+}

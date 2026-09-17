@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "import:apps": "tsx scripts/import-apps.ts"
+    "import:apps": "tsx scripts/import-apps.ts",
+    "market:sync:trends": "pnpm --filter @caniclone/api market:sync:trends"
   },
   "packageManager": "pnpm@10.33.0",
   "devDependencies": {

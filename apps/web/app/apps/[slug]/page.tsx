@@ -16,6 +16,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
+import { MarketSignal } from '@/features/market/components/market-signal';
+import { getAppMarketData, getTrendsApiData } from '@/lib/api/market';
+import type { ApiMarketTrend, ApiTrendsAppData } from '@/lib/api/types';
+
+
 export function generateMetadata({
   params
 }: {
@@ -40,8 +45,15 @@ export default async function AppDetailPage({
   const { slug } = await params;
 
   let app;
+  let marketData: ApiMarketTrend | null = null;
+  let trendsApiData = null;
+  
   try {
-    app = await getAppBySlug(slug);
+    [app, marketData, trendsApiData] = await Promise.all([
+      getAppBySlug(slug),
+      getAppMarketData(slug).catch(() => null),
+      getTrendsApiData(slug).catch(() => null)
+    ]);
   } catch {
     return <ErrorState title='Could not load this app' />;
   }
@@ -80,6 +92,10 @@ export default async function AppDetailPage({
 
         <aside className='flex flex-col gap-4'>
           <VerdictOverview app={app} />
+
+          {(marketData || trendsApiData) && (
+            <MarketSignal marketData={marketData} trendsApiData={trendsApiData} />
+          )}
 
           <div className='flex flex-col gap-4 border border-border rounded-xl p-4 bg-muted/20'>
             <div className='flex items-center gap-2 text-base font-semibold'>
