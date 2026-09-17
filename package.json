@@ -5,13 +5,18 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "import:apps": "tsx scripts/import-apps.ts"
+    "import:apps": "tsx scripts/import-apps.ts",
+    "embed:apps": "tsx scripts/generate-embeddings.ts"
   },
   "packageManager": "pnpm@10.33.0",
   "devDependencies": {
     "@caniclone/database": "workspace:*",
+    "@huggingface/transformers": "^4.2.0",
+    "@types/pg": "^8.23.1",
     "dotenv": "^17.4.2",
+    "pg": "^8.23.0",
     "tsx": "^4.23.13",
-    "turbo": "^2.10.13"
+    "turbo": "^2.10.13",
+    "typescript": "^7.0.2"
   }
 }
