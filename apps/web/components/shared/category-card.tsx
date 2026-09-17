@@ -19,7 +19,7 @@ export function CategoryCard({
   appCount: number;
   className?: string;
 }) {
-  const Icon = category.icon;
+  const Icon = category.icon || Icons.circle;
   return (
     <Link
       href={`/categories/${category.slug}`}

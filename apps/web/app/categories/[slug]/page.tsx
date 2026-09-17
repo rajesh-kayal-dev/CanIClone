@@ -1,23 +1,34 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
+import { ErrorState } from '@/components/shared/error-state';
 import { AppList } from '@/features/apps/components/app-list';
-import { getAppsByCategory, countAppsByCategory } from '@/features/apps/data/apps';
-import { getCategoryBySlug } from '@/features/categories/data/categories';
+import { getAppsByCategory } from '@/lib/api/apps';
+import { fetchCategoryStats } from '@/lib/api/categories';
+import { CategoryPill } from '@/components/ui/category-pill';
+import { BackButton } from '@/components/ui/back-button';
+
+// ... (Metadata generation is unchanged)
 
 export function generateMetadata({
   params
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  return params.then(({ slug }) => {
-    const category = getCategoryBySlug(slug);
-    if (!category) return { title: 'Category not found' };
-    return { title: category.name, description: category.description };
+  return params.then(async ({ slug }) => {
+    try {
+      const categories = await fetchCategoryStats();
+      const category = categories.find((c) => c.slug === slug);
+      if (!category) return { title: 'Category not found' };
+      return { title: category.name, description: category.description };
+    } catch {
+      return { title: 'Category', description: 'Could not load this category right now.' };
+    }
   });
 }
 
@@ -27,51 +38,55 @@ export default async function CategoryDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const category = getCategoryBySlug(slug);
+
+  let categories;
+  let apps;
+  try {
+    [categories, apps] = await Promise.all([
+      fetchCategoryStats(),
+      getAppsByCategory(slug).catch(() => [])
+    ]);
+  } catch {
+    return <ErrorState title='Could not load this category' />;
+  }
+
+  const category = categories.find((c) => c.slug === slug);
   if (!category) notFound();
 
-  const apps = getAppsByCategory(slug);
-  const Icon = category.icon;
+  let Icon = Icons.sparkles;
+  if (typeof category.icon === 'string' && Icons[category.icon as keyof typeof Icons]) {
+    Icon = Icons[category.icon as keyof typeof Icons];
+  } else if (typeof category.icon === 'function' || typeof category.icon === 'object') {
+    Icon = category.icon as any;
+  }
+  const appCount = apps.length;
 
   return (
-    <div className='mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 sm:py-14'>
-      <div className='flex flex-col gap-4'>
-        <Link
-          href='/categories'
-          className='inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground'
-        >
-          <Icons.chevronLeft className='size-4' />
-          All categories
-        </Link>
-        <div className='flex items-center gap-3'>
-          <span className='flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary [&>svg]:size-5'>
-            <Icon className='size-5' />
-          </span>
-          <div className='flex flex-col gap-1'>
-            <h1 className='text-3xl font-bold tracking-tight'>{category.name}</h1>
-            <p className='text-sm text-muted-foreground'>
-              {countAppsByCategory(slug)} {countAppsByCategory(slug) === 1 ? 'app' : 'apps'} reviewed
-            </p>
-          </div>
+    <div className='layout-container flex flex-col py-8'>
+      <div className='flex items-center gap-4 font-mono text-[11px] text-muted-foreground mb-6'>
+        <BackButton fallbackPath='/categories' />
+        <div className='flex items-center gap-2'>
+          <Link href='/categories' className='hover:underline'>all categories</Link>
+          <span>/</span>
+          <span className='text-foreground'>{category.name.toLowerCase()}</span>
         </div>
-        <p className='max-w-2xl text-muted-foreground'>{category.description}</p>
       </div>
 
+      <div className='flex items-end justify-between border-b border-border pb-2 mb-4'>
+        <div className='flex items-center gap-3'>
+          <Icon className='size-6 text-foreground' />
+          <h1 className='text-2xl font-bold tracking-tight'>{category.name}</h1>
+        </div>
+        <span className='font-mono text-[11px] text-muted-foreground'>{appCount} apps</span>
+      </div>
+      
       {apps.length > 0 ? (
-        <AppList apps={apps} />
+        <Suspense fallback={<div className='font-mono text-sm text-muted-foreground py-8'>Loading list...</div>}>
+          <AppList apps={apps} categories={categories.map(({ icon, ...c }) => c)} />
+        </Suspense>
       ) : (
-        <Empty className='border rounded-xl py-16'>
-          <EmptyHeader>
-            <EmptyTitle>No apps in this category yet</EmptyTitle>
-            <EmptyDescription>
-              We’re adding reviews all the time. Meanwhile, browse the full directory.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button size='sm' nativeButton={false} render={<Link href='/apps' />}>
-              Back to all apps
-            </Button>
-          </EmptyContent>
+        <Empty className='border-none py-16 text-center'>
+          <p className='font-mono text-sm text-muted-foreground'>No apps in this category yet.</p>
         </Empty>
       )}
     </div>

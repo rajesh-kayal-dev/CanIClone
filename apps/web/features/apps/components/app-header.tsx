@@ -4,19 +4,14 @@ import { Icons } from '@/components/icons';
 import { VerdictBadge } from '@/components/shared/verdict-badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import type { AppRecord } from '@/features/apps/data/apps';
+import type { AppRecord } from '@/lib/api/types';
+import { BackButton } from '@/components/ui/back-button';
 
 export function AppHeader({ app }: { app: AppRecord }) {
   return (
     <div className='flex flex-col gap-6'>
       <div className='flex flex-col gap-4'>
-        <Link
-          href='/apps'
-          className='inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground'
-        >
-          <Icons.chevronLeft className='size-4' />
-          All apps
-        </Link>
+        <BackButton fallbackPath='/apps' />
         <div className='flex flex-col gap-2'>
           <div className='flex flex-wrap items-center gap-2'>
             <h1 className='text-3xl font-bold tracking-tight'>{app.name}</h1>

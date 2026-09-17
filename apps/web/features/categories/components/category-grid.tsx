@@ -1,15 +1,20 @@
 import { CategoryCard } from '@/components/shared/category-card';
-import { CATEGORIES } from '@/features/categories/data/categories';
-import { countAppsByCategory } from '@/features/apps/data/apps';
+import type { CategoryWithCount } from '@/lib/api/categories';
 
-export function CategoryGrid({ className }: { className?: string }) {
+export function CategoryGrid({
+  categories,
+  className
+}: {
+  categories: CategoryWithCount[];
+  className?: string;
+}) {
   return (
     <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-4 ${className ?? ''}`}>
-      {CATEGORIES.map((category) => (
+      {categories.map((category) => (
         <CategoryCard
           key={category.slug}
           category={category}
-          appCount={countAppsByCategory(category.slug)}
+          appCount={category.appCount}
         />
       ))}
     </div>

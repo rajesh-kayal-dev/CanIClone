@@ -4,7 +4,7 @@ export interface CategoryRecord {
   slug: string;
   name: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
 export const CATEGORIES: CategoryRecord[] = [

@@ -1,6 +1,6 @@
 import { Icons } from '@/components/icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { AppRecord } from '@/features/apps/data/apps';
+import type { AppRecord } from '@/lib/api/types';
 
 type SectionKey = 'whatYouLose' | 'requirements' | 'moat';
 
@@ -82,16 +82,22 @@ export function AnalysisGrid({ app }: { app: AppRecord }) {
           </span>
         </CardHeader>
         <CardContent>
-          <div className='flex flex-wrap gap-2'>
-            {app.stack.map((item) => (
-              <span
-                key={item}
-                className='h-6 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs text-foreground'
-              >
-                {item}
-              </span>
-            ))}
-          </div>
+          {app.stack.length > 0 ? (
+            <div className='flex flex-wrap gap-2'>
+              {app.stack.map((item) => (
+                <span
+                  key={item}
+                  className='h-6 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs text-foreground'
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className='text-sm text-muted-foreground'>
+              Suggested stack is not tracked yet — the requirements list above is your best starting point.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 import { Icons } from '@/components/icons';
 import { CopyButton } from '@/components/shared/copy-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { AppRecord } from '@/features/apps/data/apps';
+import type { AppRecord } from '@/lib/api/types';
 
 export function PromptPanel({ app }: { app: AppRecord }) {
   return (

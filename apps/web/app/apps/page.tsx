@@ -1,30 +1,42 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Suspense } from 'react';
 
+import { ErrorState } from '@/components/shared/error-state';
 import { AppList } from '@/features/apps/components/app-list';
-import { APPS, getAppCount } from '@/features/apps/data/apps';
+import { getApps, getAppCount } from '@/lib/api/apps';
+import { fetchCategoryStats } from '@/lib/api/categories';
+import { CategoryPill } from '@/components/ui/category-pill';
 
 export const metadata: Metadata = {
   title: 'Apps',
   description: 'Browse every AI app in the CanIClone directory.'
 };
 
-export default function AppsPage() {
-  const count = getAppCount();
+export default async function AppsPage() {
+  let apps;
+  let count;
+  let categories;
+
+  try {
+    [apps, count, categories] = await Promise.all([getApps(), getAppCount(), fetchCategoryStats()]);
+  } catch {
+    return <ErrorState title='Could not load apps' />;
+  }
 
   return (
-    <div className='mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 sm:py-14'>
-      <div className='flex flex-col gap-1'>
-        <span className='inline-flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground'>
-          <span className='size-1.5 rounded-full bg-primary' />
-          {count} apps in the directory
-        </span>
-        <h1 className='text-3xl font-bold tracking-tight'>Every app, one verdict</h1>
-        <p className='max-w-2xl text-muted-foreground'>
-          Searchable, comparable, and every single one includes a ready-to-paste build prompt. Green
-          means go build; amber means pick your fight; red means walk away.
-        </p>
+    <div className='layout-container flex flex-col py-8'>
+      <div className='flex items-end justify-between border-b border-border pb-3 mb-6'>
+        <div className='flex flex-col gap-1'>
+          <h1 className='text-3xl font-bold tracking-tight'>The Clone List</h1>
+          <span className='font-mono text-[11px] text-muted-foreground uppercase tracking-wider'>ranked by replaced apps</span>
+        </div>
+        <span className='font-mono text-[11px] text-muted-foreground'>{count} apps</span>
       </div>
-      <AppList apps={APPS} />
+      
+      <Suspense fallback={<div className='font-mono text-sm text-muted-foreground py-8'>Loading list...</div>}>
+        <AppList apps={apps} categories={categories.map(({ icon, ...c }) => c)} />
+      </Suspense>
     </div>
   );
 }

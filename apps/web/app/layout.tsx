@@ -2,6 +2,7 @@ import Providers from '@/components/layout/providers';
 import { SiteShell } from '@/components/shared/site-shell';
 import { Toaster } from '@/components/ui/sonner';
 import { fontVariables } from '@/components/themes/font.config';
+import { ThemeFavicon } from '@/components/themes/theme-favicon';
 import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
 import ThemeProvider from '@/components/themes/theme-provider';
 import { cn } from '@/lib/utils';
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) }
     : {}),
   title: {
-    default: 'CanIClone — AI Agent Directory',
+    default: "CanIClone!",
     template: '%s | CanIClone'
   },
   description:
@@ -43,9 +44,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                // Set meta theme color
-                if (localStorage.theme === 'dark' || ((!('theme' in localStorage) || localStorage.theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '${META_THEME_COLORS.dark}')
+                var isDark = localStorage.theme === 'dark' || ((!('theme' in localStorage) || localStorage.theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (isDark) {
+                  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '${META_THEME_COLORS.dark}');
                 }
               } catch (_) {}
             `
@@ -69,6 +70,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <Toaster />
             <SiteShell>{children}</SiteShell>
           </Providers>
+          <ThemeFavicon />
         </ThemeProvider>
       </body>
     </html>

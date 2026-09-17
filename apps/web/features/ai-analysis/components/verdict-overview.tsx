@@ -3,8 +3,8 @@ import { ConfidenceBar } from '@/components/shared/confidence-bar';
 import { VerdictBadge } from '@/components/shared/verdict-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { AppRecord } from '@/features/apps/data/apps';
-import { formatVotes } from '@/features/apps/data/apps';
+import type { AppRecord } from '@/lib/api/types';
+import { formatVotes } from '@/lib/api/format';
 
 export function VerdictOverview({ app }: { app: AppRecord }) {
   return (

@@ -1,7 +1,7 @@
 import { Icons } from '@/components/icons';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { Verdict } from '@/features/apps/data/apps';
+import type { Verdict } from '@/lib/api/types';
 
 const VERDICT_STYLES: Record<Verdict, string> = {
   YES: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 dark:bg-emerald-400/10',
