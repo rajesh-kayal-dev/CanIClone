@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { AppListRow } from '@/components/ui/app-list-row';
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { CategoryWithCount } from '@/lib/api/categories';
+import { sortAppsByMode, type DiscoverySortMode } from '@/lib/ranking';
 
 interface AppListProps {
   apps: AppRecord[];
@@ -21,8 +22,17 @@ interface AppListProps {
   className?: string;
 }
 
-type SortOption = 'votes' | 'name' | 'price';
+export type SortOption = DiscoverySortMode;
 type VerdictFilter = 'all' | 'YES' | 'KINDA' | 'NO';
+
+const SORT_OPTIONS: { id: SortOption; label: string }[] = [
+  { id: 'trending', label: 'TRENDING' },
+  { id: 'popular', label: 'POPULAR' },
+  { id: 'new', label: 'NEW RELEASED' },
+  { id: 'votes', label: 'VOTES' },
+  { id: 'name', label: 'NAME' },
+  { id: 'price', label: 'PRICE' },
+];
 
 export function AppList({ apps, categories = [], className }: AppListProps) {
   const router = useRouter();
@@ -36,11 +46,11 @@ export function AppList({ apps, categories = [], className }: AppListProps) {
   }
 
   const verdictFilter = (searchParams.get('verdict') as VerdictFilter) || 'all';
-  const sortBy = (searchParams.get('sort') as SortOption) || 'votes';
+  const sortBy = (searchParams.get('sort') as SortOption) || 'trending';
 
   const updateParam = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value === 'all' || value === 'votes' && key === 'sort') {
+    if (value === 'all') {
       params.delete(key);
     } else {
       params.set(key, value);
@@ -50,7 +60,6 @@ export function AppList({ apps, categories = [], className }: AppListProps) {
 
   const setSelectedCategory = (val: string) => {
     if (pathname.startsWith('/categories/') && pathname !== '/categories') {
-      // Preserve existing sort/verdict filters, but remove category query param
       const params = new URLSearchParams(searchParams.toString());
       params.delete('category');
       
@@ -68,7 +77,7 @@ export function AppList({ apps, categories = [], className }: AppListProps) {
   };
 
   const setVerdictFilter = (val: string) => updateParam('verdict', val);
-  const setSortBy = (val: string) => updateParam('sort', val);
+  const setSortBy = (val: SortOption) => updateParam('sort', val);
 
   const filteredAndSortedApps = useMemo(() => {
     let result = [...apps];
@@ -83,27 +92,13 @@ export function AppList({ apps, categories = [], className }: AppListProps) {
       result = result.filter(a => a.verdict === verdictFilter);
     }
 
-    // Sort
-    result.sort((a, b) => {
-      if (sortBy === 'votes') {
-        return (b.voteCount || 0) - (a.voteCount || 0);
-      }
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
-      }
-      if (sortBy === 'price') {
-        // very rudimentary sort for price
-        const priceA = a.pricing === 'Free' ? 0 : parseFloat(a.pricing.replace(/[^0-9.]/g, '')) || 0;
-        const priceB = b.pricing === 'Free' ? 0 : parseFloat(b.pricing.replace(/[^0-9.]/g, '')) || 0;
-        return priceA - priceB;
-      }
-      return 0;
-    });
-
-    return result;
-  }, [apps, selectedCategory, verdictFilter, sortBy]);
+    // Apply deterministic discovery ranking mode
+    const isSearch = pathname.startsWith('/search');
+    return sortAppsByMode(result, sortBy, isSearch);
+  }, [apps, selectedCategory, verdictFilter, sortBy, pathname]);
 
   const activeCategory = categories.find(c => c.slug === selectedCategory);
+  const currentSortObj = SORT_OPTIONS.find(s => s.id === sortBy) || SORT_OPTIONS[0];
 
   return (
     <div className={cn('w-full flex flex-col', className)}>
@@ -154,13 +149,19 @@ export function AppList({ apps, categories = [], className }: AppListProps) {
         <div className='flex items-center shrink-0'>
           <DropdownMenu>
             <DropdownMenuTrigger className='flex items-center gap-1.5 text-[10px] font-mono uppercase text-muted-foreground hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring rounded-sm px-1'>
-              sort: {sortBy}
+              sort: {currentSortObj.label}
               <Icons.chevronDown className='size-3' />
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='font-mono text-[11px] uppercase'>
-              <DropdownMenuItem onClick={() => setSortBy('votes')}>votes</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('name')}>name</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('price')}>price</DropdownMenuItem>
+              {SORT_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.id}
+                  onClick={() => setSortBy(opt.id)}
+                  className={cn(sortBy === opt.id && 'font-bold text-primary')}
+                >
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

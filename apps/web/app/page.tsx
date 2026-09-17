@@ -5,19 +5,19 @@ import { Icons } from '@/components/icons';
 import { AppList } from '@/features/apps/components/app-list';
 import { CategoryPill } from '@/components/ui/category-pill';
 import { ErrorState } from '@/components/shared/error-state';
-import { getPopularApps, getAppCount } from '@/lib/api/apps';
+import { getTrendingApps, getAppCount } from '@/lib/api/apps';
 import { getTopCategories } from '@/lib/api/categories';
 import { SearchBar } from '@/features/search/components/search-bar';
 import { MicroGlyph } from '@/components/ui/micro-glyph';
 
 export default async function HomePage() {
-  let popularApps;
+  let trendingApps;
   let topCategories;
   let appCount;
 
   try {
-    [popularApps, topCategories, appCount] = await Promise.all([
-      getPopularApps(15),
+    [trendingApps, topCategories, appCount] = await Promise.all([
+      getTrendingApps(15),
       getTopCategories(20),
       getAppCount()
     ]);
@@ -71,7 +71,7 @@ export default async function HomePage() {
         <div className='flex items-end justify-between gap-4 mb-2'>
           <div className='flex flex-col gap-1'>
             <h2 className='text-2xl font-bold tracking-tight'>Trending right now</h2>
-            <p className='font-mono text-[11px] text-muted-foreground'>The most-voted reviews this month.</p>
+            <p className='font-mono text-[11px] text-muted-foreground'>Apps getting attention lately.</p>
           </div>
           <Link href='/apps' className='font-mono text-[11px] hover:underline text-muted-foreground flex items-center gap-1'>
             view all apps <Icons.arrowRight className='size-3' />
@@ -79,7 +79,7 @@ export default async function HomePage() {
         </div>
         
         <Suspense fallback={<div className='font-mono text-sm text-muted-foreground py-8'>Loading list...</div>}>
-          <AppList apps={popularApps} />
+          <AppList apps={trendingApps} />
         </Suspense>
       </section>
     </div>

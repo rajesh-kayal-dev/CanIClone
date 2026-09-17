@@ -11,7 +11,10 @@ function toListRecord(a: ApiListApp): AppRecord {
     pricing: formatPricing(a.priceMonthly),
     verdict: upperVerdict(a.verdict),
     confidence: confidenceToPercent(a.verdictConfidence),
-    voteCount: a.voteCount,
+    voteCount: a.voteCount ?? 0,
+    pagePriority: a.pagePriority ?? 3,
+    createdAt: a.createdAt,
+    updatedAt: a.updatedAt,
     description: a.verdictSummary ?? '',
     officialUrl: toOfficialUrl(a.domain),
     stack: [],
@@ -56,6 +59,14 @@ export async function getApps(): Promise<AppRecord[]> {
 export async function getAppCount(): Promise<number> {
   const apps = await fetchApps();
   return apps.length;
+}
+
+import { getTrendingScore } from '../ranking';
+
+export async function getTrendingApps(limit = 15): Promise<AppRecord[]> {
+  const apps = await fetchApps();
+  const records = apps.map(toListRecord);
+  return [...records].sort((a, b) => getTrendingScore(b) - getTrendingScore(a)).slice(0, limit);
 }
 
 export async function getPopularApps(limit = 6): Promise<AppRecord[]> {

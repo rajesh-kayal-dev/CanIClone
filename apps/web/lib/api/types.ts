@@ -16,6 +16,8 @@ export interface ApiListApp {
   diyTimeEstimate: string | null;
   pagePriority: number;
   voteCount: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ApiPricingPlan {
@@ -75,6 +77,9 @@ export interface AppRecord {
   verdict: Verdict;
   confidence: number;
   voteCount: number;
+  pagePriority?: number;
+  createdAt?: string;
+  updatedAt?: string;
   description: string;
   officialUrl?: string;
   repoUrl?: string;
