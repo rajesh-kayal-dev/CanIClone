@@ -1,11 +1,9 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  extensions = [vector]
+  provider = "postgresql"
 }
 
 model App {
@@ -35,7 +33,6 @@ model App {
 
   prompt        String?
   promptCurated Boolean @default(false)
-  embedding     Unsupported("vector(384)")?
 
   pagePriority    Int     @default(3)
   verifiedOneShot Boolean @default(false)
@@ -43,15 +40,12 @@ model App {
 
   voteCount Int @default(0)
 
-  embedding Unsupported("vector(384)")?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   pricingPlans PricingPlan[]
   alternatives Alternative[]
   aiAnalyses   AIAnalysis[]
-  marketTrend  MarketTrend?
 
   @@index([category])
   @@index([verdict])
@@ -129,36 +123,4 @@ enum Verdict {
   yes
   kinda
   no
-}
-
-model MarketTrend {
-  id    String @id @default(cuid())
-  appId String @unique
-
-  source String @default("Google Trends")
-  query  String
-
-  trendDirection  String?
-  growthPercent   Int?
-  currentInterest Int?
-  averageInterest Int?
-
-  timelineData    Json?
-  regionalData    Json?
-  relatedQueries  Json?
-
-  fetchedAt DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  app App @relation(fields: [appId], references: [id], onDelete: Cascade)
-}
-
-model MarketCache {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  data      Json
-  fetchedAt DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

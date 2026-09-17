@@ -32,6 +32,8 @@ export function generateMetadata({
   });
 }
 
+import { MicroGlyph } from '@/components/ui/micro-glyph';
+
 export default async function CategoryDetailPage({
   params
 }: {
@@ -52,13 +54,6 @@ export default async function CategoryDetailPage({
 
   const category = categories.find((c) => c.slug === slug);
   if (!category) notFound();
-
-  let Icon = Icons.sparkles;
-  if (typeof category.icon === 'string' && Icons[category.icon as keyof typeof Icons]) {
-    Icon = Icons[category.icon as keyof typeof Icons];
-  } else if (typeof category.icon === 'function' || typeof category.icon === 'object') {
-    Icon = category.icon as any;
-  }
   const appCount = apps.length;
 
   return (
@@ -74,7 +69,9 @@ export default async function CategoryDetailPage({
 
       <div className='flex items-end justify-between border-b border-border pb-2 mb-4'>
         <div className='flex items-center gap-3'>
-          <Icon className='size-6 text-foreground' />
+          <div className='flex size-7 items-center justify-center rounded border border-border/60 bg-muted/40 text-foreground'>
+            <MicroGlyph name={category.slug} className='size-4' />
+          </div>
           <h1 className='text-2xl font-bold tracking-tight'>{category.name}</h1>
         </div>
         <span className='font-mono text-[11px] text-muted-foreground'>{appCount} apps</span>
@@ -82,7 +79,7 @@ export default async function CategoryDetailPage({
       
       {apps.length > 0 ? (
         <Suspense fallback={<div className='font-mono text-sm text-muted-foreground py-8'>Loading list...</div>}>
-          <AppList apps={apps} categories={categories.map(({ icon, ...c }) => c)} />
+          <AppList apps={apps} categories={categories} />
         </Suspense>
       ) : (
         <Empty className='border-none py-16 text-center'>

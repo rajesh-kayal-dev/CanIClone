@@ -41,6 +41,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang='en' suppressHydrationWarning data-theme={themeToApply}>
       <head>
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               try {

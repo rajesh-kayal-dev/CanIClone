@@ -35,7 +35,7 @@ export default async function AppsPage() {
       </div>
       
       <Suspense fallback={<div className='font-mono text-sm text-muted-foreground py-8'>Loading list...</div>}>
-        <AppList apps={apps} categories={categories.map(({ icon, ...c }) => c)} />
+        <AppList apps={apps} categories={categories} />
       </Suspense>
     </div>
   );

@@ -12,9 +12,10 @@ import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 
 const NAV_LINKS = [
-  { href: '/apps', label: 'apps' },
-  { href: '/categories', label: 'categories' },
-  { href: '/apps', label: 'clone list' },
+  { href: '/apps', label: 'apps', pathPrefix: '/apps' },
+  { href: '/categories', label: 'categories', pathPrefix: '/categories' },
+  { href: '/market', label: 'market', pathPrefix: '/market' },
+  { href: '/apps', label: 'clone list', neverActive: true },
 ];
 
 function DecorDots() {
@@ -65,7 +66,11 @@ export function SiteHeader() {
           {/* Navigation */}
           <nav className='hidden md:flex items-center gap-8 font-mono text-[11px]' aria-label='Primary'>
             {NAV_LINKS.map((link, idx) => {
-              const isActive = pathname === link.href;
+              const isActive = link.neverActive 
+                ? false 
+                : link.pathPrefix 
+                  ? pathname === link.pathPrefix || pathname.startsWith(`${link.pathPrefix}/`)
+                  : pathname === link.href;
               return (
                 <Link
                   key={`${link.label}-${idx}`}
@@ -104,7 +109,7 @@ export function SiteHeader() {
           
           {/* GitHub Button */}
           <a 
-            href='https://github.com/caniclone/caniclone' 
+            href='https://github.com/rajesh-kayal-dev/CanIClone.git' 
             target='_blank' 
             rel='noopener noreferrer'
             className='flex items-center gap-2 border border-border/40 rounded-md px-2.5 py-1.5 text-muted-foreground hover:text-foreground bg-muted/20 hover:bg-muted/50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
@@ -152,19 +157,26 @@ export function SiteHeader() {
               <div className='flex flex-col gap-6 mt-8'>
                 <div className='flex flex-col gap-4'>
                   <span className='text-[10px] text-muted-foreground uppercase tracking-wider'>Navigation</span>
-                  {NAV_LINKS.map((link, idx) => (
-                    <Link
-                      key={`${link.label}-${idx}`}
-                      href={link.href}
-                      onClick={() => setIsOpen(false)}
-                      className={cn(
-                        'transition-colors',
-                        pathname === link.href ? 'text-foreground font-bold' : 'text-muted-foreground'
-                      )}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  {NAV_LINKS.map((link, idx) => {
+                    const isActive = link.neverActive 
+                      ? false 
+                      : link.pathPrefix 
+                        ? pathname === link.pathPrefix || pathname.startsWith(`${link.pathPrefix}/`)
+                        : pathname === link.href;
+                    return (
+                      <Link
+                        key={`${link.label}-${idx}`}
+                        href={link.href}
+                        onClick={() => setIsOpen(false)}
+                        className={cn(
+                          'transition-colors',
+                          isActive ? 'text-foreground font-bold' : 'text-muted-foreground'
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
                   <Link href='/search' onClick={() => setIsOpen(false)} className='text-muted-foreground'>search</Link>
                 </div>
                 
@@ -173,7 +185,7 @@ export function SiteHeader() {
                 <div className='flex flex-col gap-4'>
                   <span className='text-[10px] text-muted-foreground uppercase tracking-wider'>Links</span>
                   <a 
-                    href='https://github.com/caniclone/caniclone' 
+                    href='https://github.com/rajesh-kayal-dev/CanIClone.git' 
                     target='_blank' 
                     rel='noopener noreferrer'
                     className='flex items-center gap-2 text-muted-foreground'
