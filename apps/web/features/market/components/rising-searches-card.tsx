@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo } from 'react';
+
 import { ApiMarketTrend } from '@/lib/api/types';
 import { Icons } from '@/components/icons';
-import Link from 'next/link';
 
 interface RisingSearchesCardProps {
   trending: ApiMarketTrend[];
@@ -14,49 +15,58 @@ interface RisingItem {
   query: string;
   trendText: string;
   isPositive: boolean;
-  link?: string;
+  link: string;
+}
+
+function numericValue(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value.replace(/[+%]/g, ''));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 export function RisingSearchesCard({ trending, overview }: RisingSearchesCardProps) {
-  // Aggregate real rising queries from Google Trends relatedQueries & trending apps
   const risingList = useMemo<RisingItem[]>(() => {
     const items: RisingItem[] = [];
-
-    // 1. Check all relatedQueries across overview & trending
-    const allTrends = [...overview, ...trending];
     const seenQueries = new Set<string>();
 
-    allTrends.forEach((t) => {
-      const related = (t.relatedQueries as Array<{ query: string; value?: string; extracted_value?: number }>) || [];
-      related.forEach((rq) => {
-        const q = rq.query?.trim();
-        if (q && !seenQueries.has(q.toLowerCase())) {
-          seenQueries.add(q.toLowerCase());
-          const val = rq.value || (rq.extracted_value ? `+${rq.extracted_value}%` : 'RISING');
-          items.push({
-            query: q,
-            trendText: val.startsWith('+') ? val : `+${val}`,
-            isPositive: true,
-            link: `/apps?search=${encodeURIComponent(q)}`,
-          });
-        }
-      });
-    });
+    for (const trend of [...overview, ...trending]) {
+      const related = Array.isArray(trend.relatedQueries)
+        ? (trend.relatedQueries as Array<Record<string, unknown>>)
+        : [];
+      for (const relatedQuery of related) {
+        const query = typeof relatedQuery.query === 'string' ? relatedQuery.query.trim() : '';
+        const key = query.toLowerCase();
+        if (!query || seenQueries.has(key)) continue;
+        seenQueries.add(key);
+        const value = numericValue(relatedQuery.extracted_value ?? relatedQuery.value);
+        items.push({
+          query,
+          trendText: value === null ? 'related query' : `${value >= 0 ? '+' : ''}${value}%`,
+          isPositive: value === null || value >= 0,
+          link: `/apps?q=${encodeURIComponent(query)}`,
+        });
+      }
+    }
 
-    // 2. If fewer than 10, fill with top rising apps from Google Trends
-    if (items.length < 10) {
-      trending.forEach((t) => {
-        const name = t.app?.name || t.query;
-        if (name && !seenQueries.has(name.toLowerCase())) {
-          seenQueries.add(name.toLowerCase());
-          const growth = t.growthPercent !== null ? `+${t.growthPercent}%` : 'RISING';
-          items.push({
-            query: name,
-            trendText: growth,
-            isPositive: t.trendDirection === 'RISING',
-            link: t.app?.slug ? `/apps/${t.app.slug}` : `/apps?search=${encodeURIComponent(name)}`,
-          });
-        }
+    for (const trend of trending) {
+      const name = trend.app?.name || trend.query;
+      const key = name.toLowerCase();
+      if (!name || seenQueries.has(key)) continue;
+      seenQueries.add(key);
+      const value = trend.growthPercent;
+      items.push({
+        query: name,
+        trendText: value === null ? trend.trendDirection?.toLowerCase() ?? 'signal' : `${value >= 0 ? '+' : ''}${value}%`,
+        isPositive:
+          value === null
+            ? trend.trendDirection === 'RISING' || trend.trendDirection === 'STABLE'
+            : value >= 0,
+        link: trend.app?.slug
+          ? `/apps/${encodeURIComponent(trend.app.slug)}`
+          : `/apps?q=${encodeURIComponent(name)}`,
       });
     }
 
@@ -64,61 +74,57 @@ export function RisingSearchesCard({ trending, overview }: RisingSearchesCardPro
   }, [trending, overview]);
 
   return (
-    <div className="flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm overflow-hidden shadow-xs transition-all hover:border-border/80">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/20">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-6 h-6 rounded-md bg-blue-500/20 text-blue-500 flex items-center justify-center shrink-0 border border-blue-500/30">
-            <Icons.trendingUp className="w-3.5 h-3.5" />
+    <div className='flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card/40 shadow-xs backdrop-blur-sm transition-all hover:border-border/80'>
+      <div className='flex items-center justify-between border-b border-border/50 bg-muted/20 px-4 py-3'>
+        <div className='flex min-w-0 items-center gap-2.5'>
+          <div className='flex size-6 shrink-0 items-center justify-center rounded-md border border-blue-500/30 bg-blue-500/20 text-blue-500'>
+            <Icons.trendingUp className='size-3.5' />
           </div>
-          <h3 className="font-semibold text-sm text-foreground truncate tracking-tight">
+          <h3 className='truncate text-sm font-semibold tracking-tight text-foreground'>
             Rising Searches
           </h3>
         </div>
-
         <Link
-          href="/apps"
-          className="text-xs font-medium text-blue-500 hover:text-blue-400 inline-flex items-center gap-1 transition-colors shrink-0"
+          href='/apps'
+          className='inline-flex shrink-0 items-center gap-1 text-xs font-medium text-blue-500 transition-colors hover:text-blue-400'
         >
           <span>View all</span>
-          <Icons.arrowRight className="w-3 h-3" />
+          <Icons.arrowRight className='size-3' />
         </Link>
       </div>
 
-      {/* Table Header */}
-      <div className="grid grid-cols-12 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80 border-b border-border/40 bg-muted/10">
-        <div className="col-span-2 text-center font-mono">#</div>
-        <div className="col-span-6">Query</div>
-        <div className="col-span-4 text-right">Trend</div>
+      <div className='grid grid-cols-12 border-b border-border/40 bg-muted/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80'>
+        <div className='col-span-2 text-center font-mono'>#</div>
+        <div className='col-span-6'>Query</div>
+        <div className='col-span-4 text-right'>Signal</div>
       </div>
 
-      {/* List */}
-      <div className="flex flex-col divide-y divide-border/40">
+      <div className='flex flex-col divide-y divide-border/40'>
         {risingList.length === 0 ? (
-          <div className="p-6 text-center text-xs text-muted-foreground">
-            No rising search queries recorded yet.
+          <div className='p-6 text-center text-xs text-muted-foreground'>
+            No rising search queries are recorded in the cache.
           </div>
         ) : (
           risingList.map((item, index) => (
             <Link
-              key={item.query || index}
-              href={item.link || '/apps'}
-              className="grid grid-cols-12 items-center px-3 py-2.5 transition-colors hover:bg-muted/40 group"
+              key={`${item.query}-${index}`}
+              href={item.link}
+              prefetch={false}
+              className='group grid grid-cols-12 items-center px-3 py-2.5 transition-colors hover:bg-muted/40'
             >
-              <div className="col-span-2 text-center font-mono text-xs font-bold text-muted-foreground/70 group-hover:text-foreground">
+              <div className='col-span-2 text-center font-mono text-xs font-bold text-muted-foreground/70 group-hover:text-foreground'>
                 {index + 1}
               </div>
-
-              <div className="col-span-6 truncate pr-2">
-                <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">
+              <div className='col-span-6 truncate pr-2'>
+                <span className='text-xs font-medium text-foreground transition-colors group-hover:text-primary'>
                   {item.query}
                 </span>
               </div>
-
-              <div className="col-span-4 text-right flex items-center justify-end gap-1">
-                <span className="text-[11px] font-mono font-semibold text-emerald-500 flex items-center gap-0.5">
-                  <span className="text-emerald-500 text-xs">↑</span>
-                  {item.trendText}
+              <div className='col-span-4 flex items-center justify-end gap-1 text-right'>
+                <span
+                  className={`font-mono text-[11px] font-semibold ${item.isPositive ? 'text-emerald-500' : 'text-red-500'}`}
+                >
+                  {item.isPositive ? '↑' : '↓'} {item.trendText}
                 </span>
               </div>
             </Link>

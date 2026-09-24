@@ -43,8 +43,6 @@ model App {
 
   voteCount Int @default(0)
 
-  embedding Unsupported("vector(384)")?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -105,6 +103,9 @@ model AIAnalysis {
   id    String @id @default(cuid())
   appId String
 
+  verdict  String?
+  analysis Json?
+
   buildabilityScore Int?
   complexity        String?
   estimatedEffort   String?
@@ -161,4 +162,125 @@ model MarketCache {
   fetchedAt DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Ideas module — anonymous, login-free idea workspace with an AI conversation.
+// AnonymousUser 1─* Idea 1─* {AIMessage, Research, Prompt, Mvp}. Every child
+// relation cascades on delete so removing an idea removes its whole workspace.
+// ---------------------------------------------------------------------------
+
+model AnonymousUser {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ideas Idea[]
+}
+
+enum IdeaSource {
+  USER
+  RESEARCH
+}
+
+enum IdeaStatus {
+  DRAFT
+  SAVED
+}
+
+model Idea {
+  id              String     @id @default(cuid())
+  anonymousUserId String
+
+  title       String?
+  description String?
+  source      IdeaSource @default(USER)
+  status      IdeaStatus @default(DRAFT)
+
+  // Latest generated development prompt (denormalized snapshot for quick display).
+  prompt String?
+
+  targetUsers String?
+  purpose     String?
+  budget      String?
+  technology  String?
+
+  // Latest research analysis snapshot; full history lives in `researchRecords`.
+  research String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  anonymousUser   AnonymousUser @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  messages        AIMessage[]
+  researchRecords Research[]
+  prompts         Prompt[]
+  mvps            Mvp[]
+
+  @@index([anonymousUserId])
+  @@index([status])
+}
+
+model AIMessage {
+  id     String @id @default(cuid())
+  ideaId String
+
+  // role: user | assistant | system | tool
+  role String
+  // kind: chat | analysis | research | challenge | prompt | mvp
+  kind    String  @default("chat")
+  content String
+
+  createdAt DateTime @default(now())
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+model Research {
+  id     String @id @default(cuid())
+  ideaId String
+
+  query    String
+  // Raw Firecrawl results (urls, titles, snippets, markdown).
+  results  Json?
+  // Mistral's synthesized analysis / challenge over the results.
+  analysis String?
+  status   String  @default("complete")
+
+  createdAt DateTime @default(now())
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+model Prompt {
+  id     String @id @default(cuid())
+  ideaId String
+
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+model Mvp {
+  id     String @id @default(cuid())
+  ideaId String
+
+  // Full MVP.md markdown document.
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
 }

@@ -5,8 +5,11 @@ import { Separator } from '@/components/ui/separator';
 
 const FOOTER_NAV = [
   { href: '/apps', label: 'Apps' },
+  { href: '/clone-list', label: 'Clone List' },
+  { href: '/opportunities', label: 'Opportunities' },
   { href: '/categories', label: 'Categories' },
-  { href: '/search', label: 'Search' }
+  { href: '/market', label: 'Market' },
+  { href: '/search', label: 'Search' },
 ];
 
 export function SiteFooter() {
@@ -27,26 +30,19 @@ export function SiteFooter() {
             Finding out whether you can build it — and getting the prompt to start — is hard. We do
             that for every AI product we review.
           </p>
-          <div className='flex items-center gap-1'>
-            <Link
-              href='#'
-              aria-label='GitHub'
-              className='flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
-            >
-              <Icons.github className='size-4' />
-            </Link>
-            <Link
-              href='#'
-              aria-label='X (Twitter)'
-              className='flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
-            >
-              <Icons.twitter className='size-4' />
-            </Link>
-          </div>
+          <a
+            href='https://github.com/rajesh-kayal-dev/CanIClone.git'
+            target='_blank'
+            rel='noopener noreferrer'
+            aria-label='CanIClone on GitHub'
+            className='flex size-8 w-fit items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
+          >
+            <Icons.github className='size-4' />
+          </a>
         </div>
 
         <nav aria-label='Browse' className='flex flex-col gap-2 text-sm'>
-          <span className='mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase'>
+          <span className='mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground'>
             Directory
           </span>
           {FOOTER_NAV.map((link) => (
@@ -61,13 +57,13 @@ export function SiteFooter() {
         </nav>
 
         <nav aria-label='Learn' className='flex flex-col gap-2 text-sm'>
-          <span className='mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase'>
+          <span className='mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground'>
             Learn
           </span>
           <Link href='/#how-it-works' className='text-muted-foreground transition-colors hover:text-foreground'>
             How the verdict works
           </Link>
-          <Link href='/apps/example' className='text-muted-foreground transition-colors hover:text-foreground'>
+          <Link href='/apps/rankhog' className='text-muted-foreground transition-colors hover:text-foreground'>
             Read a sample review
           </Link>
         </nav>
@@ -75,7 +71,7 @@ export function SiteFooter() {
       <Separator />
       <div className='mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-2 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6'>
         <span>CanIClone &mdash; AI App Directory.</span>
-        <span>Sample product data. Build prompts included &mdash; shipping code is up to you.</span>
+        <span>Evidence-backed directory data. Build prompts included &mdash; shipping code is up to you.</span>
       </div>
     </footer>
   );

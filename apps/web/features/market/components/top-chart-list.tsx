@@ -118,12 +118,13 @@ export function TopChartList({ chartData, className }: TopChartListProps) {
 function AppRowItem({ app, index }: { app: AppRankData; index: number }) {
   const [imgFailed, setImgFailed] = useState(false);
   const rank = app.rank || index + 1;
-  const appUrl = app.slug ? `/apps/${app.slug}` : `/apps?search=${encodeURIComponent(app.name)}`;
+  const appUrl = app.slug ? `/apps/${app.slug}` : `/apps?q=${encodeURIComponent(app.name)}`;
   const initials = app.name ? app.name.substring(0, 2).toUpperCase() : '??';
 
   return (
     <Link
       href={appUrl}
+      prefetch={false}
       className="grid grid-cols-12 items-center px-3 py-2.5 transition-colors hover:bg-muted/40 group"
     >
       <div className="col-span-1 text-center font-mono text-xs font-bold text-muted-foreground/70 group-hover:text-foreground">

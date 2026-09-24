@@ -98,8 +98,8 @@ pnpm dev
 This starts:
 
 ```text
-Web → http://localhost:3000
-API → http://localhost:5000
+Web → http://localhost:6001
+API → http://localhost:7000
 ```
 
 The shared `utils` package also runs in watch mode.
@@ -131,7 +131,7 @@ pnpm build
 Run only the web app:
 
 ```bash
-pnpm --filter web dev
+pnpm --filter @caniclone/web dev
 ```
 
 Run only the API:
@@ -143,7 +143,7 @@ pnpm --filter @caniclone/api dev
 Add a package to the web app:
 
 ```bash
-pnpm --filter web add <package>
+pnpm --filter @caniclone/web add <package>
 ```
 
 Add a package to the API:
@@ -155,7 +155,7 @@ pnpm --filter @caniclone/api add <package>
 Add a development package:
 
 ```bash
-pnpm --filter web add -D <package>
+pnpm --filter @caniclone/web add -D <package>
 ```
 
 ## Where to Write Code

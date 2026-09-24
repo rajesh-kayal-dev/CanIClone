@@ -8,13 +8,14 @@ interface CategoryPillProps {
     slug: string;
     name: string;
   };
+  href?: string;
   isActive?: boolean;
 }
 
-export function CategoryPill({ category, isActive }: CategoryPillProps) {
+export function CategoryPill({ category, href, isActive }: CategoryPillProps) {
   return (
-    <Link 
-      href={`/categories/${category.slug}`}
+    <Link
+      href={href ?? `/categories/${category.slug}`}
       className={cn(
         'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-mono transition-colors whitespace-nowrap',
         isActive 

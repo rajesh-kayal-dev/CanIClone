@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react';
 
+const QUERY = '(max-width: 768px)';
+
 export function useMediaQuery() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(QUERY).matches,
+  );
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 768px)');
-    setIsOpen(mediaQuery.matches);
-
-    const handler = (e: MediaQueryListEvent) => {
-      setIsOpen(e.matches);
-    };
-
+    const mediaQuery = window.matchMedia(QUERY);
+    const handler = (event: MediaQueryListEvent) => setIsOpen(event.matches);
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);

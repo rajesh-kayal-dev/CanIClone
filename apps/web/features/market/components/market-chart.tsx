@@ -14,9 +14,11 @@ import {
 import { cn } from '@/lib/utils';
 import { Icons } from '@/components/icons';
 
+import type { MarketRange } from './market-filter-bar';
+
 interface MarketChartProps {
   overview: ApiMarketTrend[];
-  timeframe?: '30D' | '90D' | '12M';
+  timeframe?: MarketRange;
 }
 
 interface TimelineItem {
@@ -94,15 +96,9 @@ export function MarketChart({ overview, timeframe = '30D' }: MarketChartProps) {
     );
   }, [overview]);
 
-  // Initial active lines
-  const [selectedApps, setSelectedApps] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    validItems.forEach((item, idx) => {
-      const name = item.app?.name || item.query || `App ${idx + 1}`;
-      initial[name] = true;
-    });
-    return initial;
-  });
+  // A missing key means the line is enabled; this also handles a changed
+  // cached dataset without an effect that would reset user selections.
+  const [selectedApps, setSelectedApps] = useState<Record<string, boolean>>({});
 
   const toggleApp = (appName: string) => {
     setSelectedApps((prev) => ({
@@ -111,7 +107,6 @@ export function MarketChart({ overview, timeframe = '30D' }: MarketChartProps) {
     }));
   };
 
-  // Find the base timeline with highest length
   const baseTimeline = useMemo<TimelineItem[]>(() => {
     if (validItems.length === 0) return [];
     const longest = validItems.reduce((prev, current) => {
@@ -121,14 +116,38 @@ export function MarketChart({ overview, timeframe = '30D' }: MarketChartProps) {
     });
 
     const list = (longest.timelineData as TimelineItem[]) || [];
-
-    // Slice based on timeframe
-    if (timeframe === '30D') {
-      return list.slice(-8); // Last 8 weekly points (~2 months / 30-60d)
-    } else if (timeframe === '90D') {
-      return list.slice(-14);
+    const days = timeframe === '7D' ? 7 : timeframe === '30D' ? 30 : timeframe === '90D' ? 90 : 365;
+    const dates = list
+      .map((point) => {
+        const raw = point.timestamp ?? point.time;
+        const numeric = typeof raw === 'string' ? Number(raw) : raw;
+        if (typeof numeric === 'number' && Number.isFinite(numeric)) {
+          return numeric > 1e11 ? numeric : numeric * 1000;
+        }
+        const parsed = point.date ? Date.parse(point.date) : NaN;
+        return Number.isFinite(parsed) ? parsed : null;
+      })
+      .filter((value): value is number => value !== null);
+    const latest = dates.length > 0 ? Math.max(...dates) : null;
+    if (latest === null) {
+      const fallbackPoints = timeframe === '7D' ? 2 : timeframe === '30D' ? 5 : timeframe === '90D' ? 14 : list.length;
+      return list.slice(-fallbackPoints);
     }
-    return list;
+    const cutoff = latest - days * 24 * 60 * 60 * 1000;
+    const filtered = list.filter((point) => {
+      const raw = point.timestamp ?? point.time;
+      const numeric = typeof raw === 'string' ? Number(raw) : raw;
+      const timestamp =
+        typeof numeric === 'number' && Number.isFinite(numeric)
+          ? numeric > 1e11
+            ? numeric
+            : numeric * 1000
+          : point.date
+            ? Date.parse(point.date)
+            : NaN;
+      return !Number.isFinite(timestamp) || timestamp >= cutoff;
+    });
+    return filtered.length > 0 ? filtered : list.slice(-1);
   }, [validItems, timeframe]);
 
   // Transform data for Recharts
@@ -137,7 +156,7 @@ export function MarketChart({ overview, timeframe = '30D' }: MarketChartProps) {
 
     return baseTimeline.map((timePoint, index) => {
       const dateLabel = normalizeDate(timePoint) || `Point ${index + 1}`;
-      const dataPoint: Record<string, string | number> = {
+      const dataPoint: Record<string, string | number | null> = {
         name: dateLabel,
       };
 
@@ -162,14 +181,10 @@ export function MarketChart({ overview, timeframe = '30D' }: MarketChartProps) {
           ) || matched.values[appIdx] || matched.values[0];
 
           if (valObj) {
-            const rawVal = valObj.extracted_value ?? valObj.value ?? 0;
-            const parsed = typeof rawVal === 'string' ? parseInt(rawVal, 10) : Number(rawVal);
-            dataPoint[appName] = isNaN(parsed) ? 0 : parsed;
-          } else {
-            dataPoint[appName] = 0;
+            const rawVal = valObj.extracted_value ?? valObj.value;
+            const parsed = typeof rawVal === 'string' ? Number.parseInt(rawVal, 10) : Number(rawVal);
+            if (Number.isFinite(parsed)) dataPoint[appName] = parsed;
           }
-        } else {
-          dataPoint[appName] = 0;
         }
       });
 

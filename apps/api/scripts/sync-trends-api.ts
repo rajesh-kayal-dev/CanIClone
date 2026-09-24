@@ -20,7 +20,7 @@ async function syncTopCharts() {
   for (const chart of charts) {
     console.log(`Fetching ${chart.title} (Trends API type: "${chart.type}")...`);
     try {
-      const data = await getTopCharts(chart.type);
+      const data = await getTopCharts(chart.type, 10, { forceRefresh: true });
       const key = getChartCacheKey(chart.type);
       const count = Array.isArray(data) ? data.length : 0;
       console.log(`✓ ${chart.title} synced (${count} items, cache key: "${key}").`);
@@ -41,7 +41,7 @@ async function syncAppSignals() {
     console.log(`Fetching data for ${slug} (${identifier})...`);
 
     try {
-      await getAppGrowth(identifier);
+      await getAppGrowth(identifier, { forceRefresh: true });
       console.log(`✓ Growth synced for ${slug}.`);
     } catch (e: any) {
       console.error(`✗ Failed to sync growth for ${slug}:`, e?.message || e);
@@ -50,7 +50,7 @@ async function syncAppSignals() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     try {
-      await getAppTimeSeries(identifier);
+      await getAppTimeSeries(identifier, { forceRefresh: true });
       console.log(`✓ Time Series synced for ${slug}.`);
     } catch (e: any) {
       console.error(`✗ Failed to sync time series for ${slug}:`, e?.message || e);
@@ -66,6 +66,17 @@ async function main() {
     
     await syncTopCharts();
     await syncAppSignals();
+
+    const cached = await prisma.marketCache.findMany({
+      where: { key: { startsWith: 'trendsapi:' } },
+      select: { key: true, fetchedAt: true, data: true },
+      orderBy: { fetchedAt: 'desc' },
+    });
+    console.log(`Cache verification: ${cached.length} Trends API rows stored.`);
+    for (const row of cached.slice(0, 5)) {
+      const itemCount = Array.isArray(row.data) ? row.data.length : 'object';
+      console.log(`  ${row.key}: ${itemCount}, fetchedAt=${row.fetchedAt.toISOString()}`);
+    }
 
     console.log('Sync complete.');
   } catch (error) {

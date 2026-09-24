@@ -5,12 +5,12 @@ dotenv.config({ path: "packages/database/.env" });
 const { hybridSearchApps } = await import("@caniclone/database");
 
 const QUERIES = [
-  "Claude Code",
-  "AI coding agent",
-  "AI image generation",
-  "AI video editor",
-  "open source productivity tool",
-  "developer coding assistant",
+  'AI coding agent',
+  'AI image generator',
+  'developer coding assistant',
+  'productivity tool',
+  'Claude Code',
+  'Cursor',
 ];
 
 async function maskPooledUrl() {
@@ -31,13 +31,15 @@ async function run(query: string) {
       `  ${i + 1}. ${r.name}  (${r.slug})  [${r.category}]  kw=${r.keywordScore} sem=${r.semanticScore} final=${r.finalScore} via ${r.matchType}`
     );
   }
+  return results;
 }
 
 async function main() {
   console.log(`Search target: ${await maskPooledUrl()}`);
   for (const q of QUERIES) {
     try {
-      await run(q);
+      const results = await run(q);
+      if (results.length === 0) throw new Error('no results');
     } catch (error) {
       console.error(`\n[error] "${q}": ${error instanceof Error ? error.message : error}`);
       process.exitCode = 1;

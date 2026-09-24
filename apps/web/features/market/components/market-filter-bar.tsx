@@ -1,33 +1,53 @@
 'use client';
 
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { Icons } from '@/components/icons';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface MarketFilterBarProps {
-  lastUpdated?: string | Date;
-  onFilterChange?: (filters: { range: string; category: string; region: string; sort: string }) => void;
+import { Icons } from '@/components/icons';
+import { cn } from '@/lib/utils';
+
+export type MarketRange = '7D' | '30D' | '90D' | '12M';
+export type MarketSort = 'trending' | 'interest' | 'growth';
+
+export interface MarketFilters {
+  range: MarketRange;
+  category: string;
+  region: string;
+  sort: MarketSort;
 }
 
-export function MarketFilterBar({ lastUpdated, onFilterChange }: MarketFilterBarProps) {
+interface MarketFilterBarProps {
+  lastUpdated?: string | null;
+  filters?: MarketFilters;
+  categories?: string[];
+  regions?: string[];
+  onFilterChange?: (filters: MarketFilters) => void;
+}
+
+const DEFAULT_FILTERS: MarketFilters = {
+  range: '30D',
+  category: 'all',
+  region: 'worldwide',
+  sort: 'trending',
+};
+
+export function MarketFilterBar({
+  lastUpdated,
+  filters,
+  categories = [],
+  regions = [],
+  onFilterChange,
+}: MarketFilterBarProps) {
   const router = useRouter();
-  const [range, setRange] = useState<'7D' | '30D' | '90D' | '12M'>('30D');
-  const [category, setCategory] = useState('all');
-  const [region, setRegion] = useState('worldwide');
-  const [sort, setSort] = useState('trending');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [internalFilters, setInternalFilters] = useState<MarketFilters>(DEFAULT_FILTERS);
+  const [isPending, startTransition] = useTransition();
+  const current = filters ?? internalFilters;
 
-  const handleRangeChange = (newRange: '7D' | '30D' | '90D' | '12M') => {
-    setRange(newRange);
-    onFilterChange?.({ range: newRange, category, region, sort });
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    router.refresh();
-    setTimeout(() => setIsRefreshing(false), 800);
-  };
+  function update(patch: Partial<MarketFilters>) {
+    const next = { ...current, ...patch };
+    if (!filters) setInternalFilters(next);
+    onFilterChange?.(next);
+  }
 
   const formattedDate = lastUpdated
     ? new Date(lastUpdated).toLocaleString('en-US', {
@@ -37,111 +57,104 @@ export function MarketFilterBar({ lastUpdated, onFilterChange }: MarketFilterBar
         hour: 'numeric',
         minute: '2-digit',
       })
-    : new Date().toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
+    : null;
+
+  const hasRegions = regions.length > 0;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 py-1">
-      {/* Left Filter Controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Time Period Tabs */}
-        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border/50 text-xs">
-          {(['7D', '30D', '90D', '12M'] as const).map((r) => (
+    <div className='flex flex-wrap items-center justify-between gap-4 py-1'>
+      <div className='flex flex-wrap items-center gap-3'>
+        <div className='flex items-center gap-1 rounded-lg border border-border/50 bg-muted/40 p-1 text-xs'>
+          {(['7D', '30D', '90D', '12M'] as const).map((range) => (
             <button
-              key={r}
-              type="button"
-              onClick={() => handleRangeChange(r)}
+              key={range}
+              type='button'
+              onClick={() => update({ range })}
               className={cn(
-                'px-3 py-1 rounded-md font-medium transition-all cursor-pointer',
-                range === r
-                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                'rounded-md px-3 py-1 font-medium transition-colors',
+                current.range === range
+                  ? 'bg-blue-600 font-semibold text-white shadow-xs'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
               )}
             >
-              {r}
+              {range}
             </button>
           ))}
         </div>
 
-        {/* Category Dropdown */}
-        <div className="relative inline-flex items-center">
+        <div className='relative inline-flex items-center'>
           <select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              onFilterChange?.({ range, category: e.target.value, region, sort });
-            }}
-            className="appearance-none bg-card/60 hover:bg-muted/40 border border-border/60 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-foreground cursor-pointer transition-colors focus:outline-hidden focus:ring-1 focus:ring-primary"
+            value={current.category}
+            onChange={(event) => update({ category: event.target.value })}
+            aria-label='Filter by category'
+            className='appearance-none rounded-lg border border-border/60 bg-card/60 px-3 py-1.5 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted/40 focus:outline-hidden focus:ring-1 focus:ring-primary'
           >
-            <option value="all">📁 All categories</option>
-            <option value="productivity">⚡ Productivity</option>
-            <option value="developer-tools">💻 Developer Tools</option>
-            <option value="ai-machine-learning">🤖 AI & Machine Learning</option>
-            <option value="design">🎨 Design</option>
+            <option value='all'>All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category.replace(/-/g, ' ')}
+              </option>
+            ))}
           </select>
-          <Icons.chevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 pointer-events-none" />
+          <Icons.chevronDown className='pointer-events-none absolute right-2.5 w-3.5 h-3.5 text-muted-foreground' />
         </div>
 
-        {/* Region Dropdown */}
-        <div className="relative inline-flex items-center">
+        <div className='relative inline-flex items-center'>
           <select
-            value={region}
-            onChange={(e) => {
-              setRegion(e.target.value);
-              onFilterChange?.({ range, category, region: e.target.value, sort });
-            }}
-            className="appearance-none bg-card/60 hover:bg-muted/40 border border-border/60 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-foreground cursor-pointer transition-colors focus:outline-hidden focus:ring-1 focus:ring-primary"
+            value={hasRegions ? current.region : 'unavailable'}
+            onChange={(event) => update({ region: event.target.value })}
+            disabled={!hasRegions}
+            aria-label='Filter by region'
+            className='appearance-none rounded-lg border border-border/60 bg-card/60 px-3 py-1.5 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted/40 focus:outline-hidden focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50'
           >
-            <option value="worldwide">🌐 Worldwide</option>
-            <option value="us">🇺🇸 United States</option>
-            <option value="eu">🇪🇺 Europe</option>
-            <option value="asia">🌏 Asia</option>
+            {hasRegions ? (
+              <>
+                <option value='worldwide'>Worldwide</option>
+                {regions.map((region) => (
+                  <option key={region} value={region}>
+                    {region}
+                  </option>
+                ))}
+              </>
+            ) : (
+              <option value='unavailable'>Region data unavailable</option>
+            )}
           </select>
-          <Icons.chevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 pointer-events-none" />
+          <Icons.chevronDown className='pointer-events-none absolute right-2.5 w-3.5 h-3.5 text-muted-foreground' />
         </div>
 
-        {/* Sort Dropdown */}
-        <div className="relative inline-flex items-center">
+        <div className='relative inline-flex items-center'>
           <select
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              onFilterChange?.({ range, category, region, sort: e.target.value });
-            }}
-            className="appearance-none bg-card/60 hover:bg-muted/40 border border-border/60 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-foreground cursor-pointer transition-colors focus:outline-hidden focus:ring-1 focus:ring-primary"
+            value={current.sort}
+            onChange={(event) => update({ sort: event.target.value as MarketSort })}
+            aria-label='Sort market data'
+            className='appearance-none rounded-lg border border-border/60 bg-card/60 px-3 py-1.5 pr-8 text-xs font-medium text-foreground transition-colors hover:bg-muted/40 focus:outline-hidden focus:ring-1 focus:ring-primary'
           >
-            <option value="trending">Sort by: Trending</option>
-            <option value="interest">Sort by: Search Interest</option>
-            <option value="growth">Sort by: Growth %</option>
+            <option value='trending'>Sort: Trending</option>
+            <option value='interest'>Sort: Search Interest</option>
+            <option value='growth'>Sort: Growth %</option>
           </select>
-          <Icons.chevronDown className="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 pointer-events-none" />
+          <Icons.chevronDown className='pointer-events-none absolute right-2.5 w-3.5 h-3.5 text-muted-foreground' />
         </div>
       </div>
 
-      {/* Right Controls: Timestamp + Refresh */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <div className="flex flex-col text-right">
-          <span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground/70">
+      <div className='flex items-center gap-3 text-xs text-muted-foreground'>
+        <div className='flex flex-col text-right'>
+          <span className='text-[10px] font-mono uppercase tracking-wider text-muted-foreground/70'>
             Last updated
           </span>
-          <span className="font-mono text-[11px] font-medium text-foreground/80">
-            {formattedDate}
+          <span className='font-mono text-[11px] font-medium text-foreground/80'>
+            {formattedDate ?? 'Unavailable'}
           </span>
         </div>
-
         <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/60 bg-card/60 hover:bg-muted/40 font-medium text-xs text-foreground transition-all cursor-pointer disabled:opacity-50"
+          type='button'
+          onClick={() => startTransition(() => router.refresh())}
+          disabled={isPending}
+          className='inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-card/60 px-3 py-1.5 font-medium text-xs text-foreground transition-all hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50'
         >
-          <Icons.spinner className={cn('w-3.5 h-3.5', isRefreshing && 'animate-spin')} />
-          <span>Refresh</span>
+          <Icons.spinner className={cn('w-3.5 h-3.5', isPending && 'animate-spin')} />
+          <span>{isPending ? 'Refreshing' : 'Refresh'}</span>
         </button>
       </div>
     </div>

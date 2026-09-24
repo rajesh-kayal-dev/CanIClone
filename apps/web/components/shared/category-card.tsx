@@ -32,6 +32,7 @@ export function CategoryCard({
   return (
     <Link
       href={`/categories/${category.slug}`}
+      prefetch={false}
       className={cn(
         'group/cat flex flex-col justify-between rounded-lg border border-border/70 bg-card p-4 transition-all duration-150 hover:border-foreground/30 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         className
@@ -76,14 +77,19 @@ export function CategoryCard({
                     className='relative flex size-4.5 items-center justify-center rounded-full border border-background bg-muted text-[8px] font-mono text-muted-foreground overflow-hidden flex-shrink-0 ring-1 ring-border/30'
                   >
                     {domain ? (
-                      <img
-                        src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
-                        alt={app.name}
-                        className='size-full object-cover'
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
+                      <>
+                        {/* Official domain favicon; preserve the real provider asset. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+                          alt={app.name}
+                          loading='lazy'
+                          className='size-full object-cover'
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </>
                     ) : (
                       <span>{initials}</span>
                     )}

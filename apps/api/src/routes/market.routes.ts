@@ -3,6 +3,7 @@ import * as MarketController from '../controllers/market.controller.js';
 
 const router = Router();
 
+router.get('/summary', MarketController.getSummary);
 router.get('/trending', MarketController.getTrending);
 router.get('/overview', MarketController.getOverview);
 router.get('/apps/:slug', MarketController.getAppMarketData);

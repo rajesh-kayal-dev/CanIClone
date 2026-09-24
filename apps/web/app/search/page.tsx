@@ -1,20 +1,12 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 
-import { Icons } from '@/components/icons';
-import { AppList } from '@/features/apps/components/app-list';
-import { Button } from '@/components/ui/button';
-import { ErrorState } from '@/components/shared/error-state';
+import { CategoryPill } from '@/components/ui/category-pill';
 import { SearchBar } from '@/features/search/components/search-bar';
 import { SearchResults } from '@/features/search/components/search-results';
-import { getPopularApps } from '@/lib/api/apps';
-import type { AppRecord } from '@/lib/api/types';
-import { CategoryPill } from '@/components/ui/category-pill';
 
 export const metadata: Metadata = {
   title: 'Search',
-  description: 'Search the CanIClone directory of AI apps, agents, and tools.'
+  description: 'Fast keyword and hybrid vector search across the CanIClone directory.',
 };
 
 const SUGGESTIONS = [
@@ -23,32 +15,25 @@ const SUGGESTIONS = [
   { label: 'Open source', query: 'open source' },
   { label: 'Voice', query: 'audio' },
   { label: 'Code', query: 'code' },
-  { label: 'RAG', query: 'rag' }
+  { label: 'RAG', query: 'rag' },
 ];
 
 export default async function SearchPage({
-  searchParams
+  searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
   const normalized = q?.trim() ?? '';
 
-  let trending: AppRecord[] = [];
-  try {
-    trending = await getPopularApps(5);
-  } catch {
-    trending = [];
-  }
-
   return (
     <div className='layout-container flex flex-col gap-8 py-8'>
       <div className='flex items-end justify-between border-b border-border pb-2'>
         <h1 className='text-2xl font-bold tracking-tight'>Search</h1>
-        <span className='font-mono text-[11px] text-muted-foreground'>Directory</span>
+        <span className='font-mono text-[11px] text-muted-foreground'>Fast hybrid search</span>
       </div>
 
-      <SearchBar size='lg' defaultValue={normalized} />
+      <SearchBar key={normalized} size='lg' defaultValue={normalized} />
 
       {normalized ? (
         <div className='flex flex-col gap-4'>
@@ -58,33 +43,25 @@ export default async function SearchPage({
           <SearchResults query={normalized} />
         </div>
       ) : (
-        <div className='flex flex-col gap-8'>
-          <div className='flex flex-wrap items-center gap-2'>
-            <span className='font-mono text-[11px] text-muted-foreground mr-2'>Try:</span>
+        <section className='flex flex-col items-center gap-6 rounded-xl border border-border/60 bg-muted/10 px-6 py-12 text-center'>
+          <div className='flex flex-col gap-2'>
+            <h2 className='text-lg font-semibold tracking-tight'>Start typing to search</h2>
+            <p className='max-w-md text-sm leading-relaxed text-muted-foreground'>
+              Suggestions are debounced and combine app text with the existing 384-dimension vector index.
+              Press Enter for the full hybrid results.
+            </p>
+          </div>
+          <div className='flex flex-wrap items-center justify-center gap-2'>
+            <span className='mr-1 font-mono text-[11px] uppercase text-muted-foreground'>Try</span>
             {SUGGESTIONS.map((item) => (
-              <CategoryPill 
+              <CategoryPill
                 key={item.query}
-                category={{ name: item.label, slug: `/search?q=${encodeURIComponent(item.query)}` }} 
+                category={{ name: item.label, slug: item.query }}
+                href={`/search?q=${encodeURIComponent(item.query)}`}
               />
             ))}
           </div>
-
-          <div className='flex flex-col gap-4'>
-            <div className='flex items-end justify-between border-b border-border pb-2'>
-              <h2 className='text-lg font-semibold tracking-tight'>Trending</h2>
-              <Link href='/apps' className='font-mono text-[11px] hover:underline text-muted-foreground flex items-center gap-1'>
-                All apps <Icons.arrowRight className='size-3' />
-              </Link>
-            </div>
-            {trending.length > 0 ? (
-              <Suspense fallback={<div className='font-mono text-sm text-muted-foreground py-8'>Loading list...</div>}>
-                <AppList apps={trending} />
-              </Suspense>
-            ) : (
-              <ErrorState title='Nothing trending right now' description='Trending requires the API to be running.' className='py-12 border-none' />
-            )}
-          </div>
-        </div>
+        </section>
       )}
     </div>
   );

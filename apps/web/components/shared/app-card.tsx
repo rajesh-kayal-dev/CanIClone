@@ -21,7 +21,7 @@ export function AppCard({ app, className }: { app: AppRecord; className?: string
       href={`/apps/${app.slug}`}
       className='group/app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
     >
-      <Card className='flex h-full flex-col transition-colors group-hover/app:ring-ring/50 group-hover/app:bg-muted/30'>
+      <Card className={cn('flex h-full flex-col transition-colors group-hover/app:ring-ring/50 group-hover/app:bg-muted/30', className)}>
         <CardHeader>
           <CardTitle className='flex items-start justify-between gap-2'>
             <span className='truncate'>{app.name}</span>

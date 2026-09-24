@@ -116,11 +116,14 @@ function InfobarProvider({
 
   // Preserve the current infobar state when switching between mobile and desktop.
   React.useEffect(() => {
-    if (isMobile) {
-      setOpenMobile(open);
-    } else {
-      setOpen(openMobile);
-    }
+    const timer = window.setTimeout(() => {
+      if (isMobile) {
+        setOpenMobile(open);
+      } else {
+        setOpen(openMobile);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only reconcile when the breakpoint changes
   }, [isMobile]);
 
@@ -139,18 +142,22 @@ function InfobarProvider({
 
   // Clear content and close infobar when pathname changes
   React.useEffect(() => {
-    if (contentPathname !== null && contentPathname !== pathname) {
+    if (contentPathname === null || contentPathname === pathname) return;
+    let resetTimer: number | undefined;
+    const startTimer = window.setTimeout(() => {
       setIsPathnameChanging(true);
       setContent(null);
       setContentPathname(null);
       setOpen(false);
 
-      const timer = setTimeout(() => {
+      resetTimer = window.setTimeout(() => {
         setIsPathnameChanging(false);
       }, 200);
-
-      return () => clearTimeout(timer);
-    }
+    }, 0);
+    return () => {
+      window.clearTimeout(startTimer);
+      if (resetTimer !== undefined) window.clearTimeout(resetTimer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setOpen is a stable React state setter
   }, [pathname, contentPathname]);
 
@@ -649,10 +656,8 @@ function InfobarMenuSkeleton({
 }: React.ComponentProps<'div'> & {
   showIcon?: boolean;
 }) {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
-  }, []);
+  // Keep the placeholder deterministic so server and client renders match.
+  const width = '68%';
 
   return (
     <div

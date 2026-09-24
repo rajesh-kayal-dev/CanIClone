@@ -1,18 +1,25 @@
 import { Router } from "express";
 import {
-  listApps,
   getApp,
+  getAppStats,
+  getCategory,
   listAppAlternatives,
+  listApps,
   listCategories,
-  search
+  listRelatedApps,
+  search,
 } from "../controllers/apps.controller.js";
 
 const router = Router();
 
-router.get("/", listApps);
+// Keep collection routes before /:slug routes.
 router.get("/categories", listCategories);
+router.get("/categories/:slug", getCategory);
+router.get("/stats", getAppStats);
 router.get("/search", search);
+router.get("/", listApps);
 router.get("/:slug/alternatives", listAppAlternatives);
+router.get("/:slug/related", listRelatedApps);
 router.get("/:slug", getApp);
 
 export default router;

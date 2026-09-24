@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { ErrorState } from '@/components/shared/error-state';
 import { CategoryGrid } from '@/features/categories/components/category-grid';
 import { fetchCategoryStats } from '@/lib/api/categories';
-import { getAppCount } from '@/lib/api/apps';
 
 export const metadata: Metadata = {
   title: 'Categories',
@@ -12,13 +11,14 @@ export const metadata: Metadata = {
 
 export default async function CategoriesPage() {
   let categories;
-  let appCount;
 
   try {
-    [categories, appCount] = await Promise.all([fetchCategoryStats(), getAppCount()]);
+    categories = await fetchCategoryStats();
   } catch {
     return <ErrorState title='Could not load categories' />;
   }
+
+  const appCount = categories.reduce((sum, category) => sum + category.appCount, 0);
 
   return (
     <div className='layout-container flex flex-col gap-6 py-8 sm:py-12'>
