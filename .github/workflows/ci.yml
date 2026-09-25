@@ -36,6 +36,9 @@ jobs:
         # Keep the lockfile authoritative; CI must not rewrite it.
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Next.js route types
+        run: pnpm --filter @caniclone/web exec next typegen
+
       - name: Lint
         run: pnpm lint
 
