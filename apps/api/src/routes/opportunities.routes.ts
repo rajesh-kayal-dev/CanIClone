@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   listOpportunityRows,
   getOpportunity,
-} from "../controllers/opportunities.controller.js";
+} from "../controllers/opportunities/opportunities.controller.js";
 
 const router = Router();
 

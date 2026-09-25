@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 
 const FOOTER_NAV = [
   { href: '/apps', label: 'Apps' },
-  { href: '/clone-list', label: 'Clone List' },
+  { href: '/ideas', label: 'Ideas' },
   { href: '/opportunities', label: 'Opportunities' },
   { href: '/categories', label: 'Categories' },
   { href: '/market', label: 'Market' },

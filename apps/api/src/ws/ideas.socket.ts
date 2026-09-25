@@ -1,73 +1,41 @@
 import type { Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 
-import { isResearchEnabled, ResearchUnavailableError } from "../lib/firecrawl.js";
+import { isResearchEnabled } from "../integrations/firecrawl.js";
 import {
   getCapabilities,
-  IdeaNotFoundError,
-  InvalidAnonymousIdError,
   isValidAnonymousId,
-} from "../services/ideas.service.js";
-import { runChat, runCreateMvp, runCreatePrompt } from "../services/ideas-ai.service.js";
-import { runResearch } from "../services/research.service.js";
+} from "../services/ideas/ideas.service.js";
+import { runChat, runCreateMvp, runCreatePrompt } from "../services/ideas/ideas-ai.service.js";
+import { runInitialAnalysis } from "../services/ideas/initial-analysis.service.js";
+import { runResearch } from "../services/ideas/research.service.js";
+
+import { handleAppMessage } from "./app-assistant.socket.js";
+import {
+  isAppClientMessage,
+  type AppClientMessage,
+} from "./protocols/app-assistant.js";
+import { classify } from "./protocols/errors.js";
+import type { IdeasClientMessage } from "./protocols/ideas.js";
+import { send } from "./protocols/transport.js";
 
 /**
  * WebSocket transport for the Ideas AI workspace (path: /ws). The AI itself is
- * never faked: handlers call the real Mistral/Firecrawl services and stream the
+ * never faked: handlers call the real AI/Firecrawl services and stream the
  * result. When the provider is rate-limited or research is not configured, an
  * honest `error` event is sent instead of a fabricated answer.
  *
  * Protocol (JSON):
- *  client -> server: {type:"ping"} | {type:"chat"|"research"|"prompt"|"mvp", requestId, ideaId, anonymousUserId, content?}
- *  server -> client: {type:"ready"|"pong"|"chat.start"|"chat.delta"|"chat.done"|"action.start"|"action.done"|"error", ...}
+ *  client -> server: {type:"ping"} | {type:"chat"|"analyze"|"research"|"prompt"|"mvp", requestId, ideaId, anonymousUserId, content?} | {type:"app.chat"|"app.research"|"app.prompt"|"app.mvp"|"app.cancel", requestId, appSlug, anonymousUserId, content?}
+ *  server -> client: {type:"ready"|"pong"|"chat.start"|"chat.progress"|"chat.delta"|"chat.done"|"analysis.start"|"analysis.progress"|"analysis.title"|"analysis.delta"|"analysis.done"|"action.start"|"action.progress"|"action.done"|"app.chat.start"|"app.chat.progress"|"app.chat.delta"|"app.chat.done"|"app.cancelled"|"app.action.start"|"app.action.progress"|"app.action.done"|"error", ...}
  */
 
 type ClientMessage =
   | { type: "ping" }
-  | {
-      type: "chat" | "research" | "prompt" | "mvp";
-      requestId?: string;
-      ideaId?: string;
-      anonymousUserId?: string;
-      content?: string;
-    };
+  | IdeasClientMessage
+  | AppClientMessage;
 
-function send(socket: WebSocket, payload: Record<string, unknown>): void {
-  if (socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(payload));
-  }
-}
-
-/** Walk an error chain for an HTTP status (the AI SDK nests provider errors). */
-function findStatusCode(err: unknown): number | undefined {
-  let cur = err as { statusCode?: number; cause?: unknown } | null | undefined;
-  for (let i = 0; i < 5 && cur; i++) {
-    if (typeof cur.statusCode === "number") return cur.statusCode;
-    cur = cur.cause as typeof cur;
-  }
-  return undefined;
-}
-
-function classify(err: unknown): { code: string; message: string } {
-  if (err instanceof InvalidAnonymousIdError) {
-    return { code: "bad_request", message: "A valid anonymous user id is required" };
-  }
-  if (err instanceof IdeaNotFoundError) {
-    return { code: "not_found", message: "Idea not found" };
-  }
-  if (err instanceof ResearchUnavailableError) {
-    return { code: "research_unavailable", message: err.message };
-  }
-  const status = findStatusCode(err);
-  const raw = err instanceof Error ? err.message : "";
-  if (status === 429 || /rate.?limit|429/i.test(raw)) {
-    return { code: "ai_unavailable", message: "AI is temporarily unavailable (provider rate limit). Try again later." };
-  }
-  if (status === 401 || status === 403 || raw.includes("MISTRAL_API_KEY")) {
-    return { code: "ai_unavailable", message: "AI is not configured on this server." };
-  }
-  return { code: "internal", message: "Request failed" };
-}
+const activeInitialAnalyses = new Set<string>();
 
 async function handle(socket: WebSocket, raw: unknown): Promise<void> {
   let msg: ClientMessage;
@@ -82,6 +50,9 @@ async function handle(socket: WebSocket, raw: unknown): Promise<void> {
   }
 
   if (msg.type === "ping") return send(socket, { type: "pong" });
+  if (isAppClientMessage(msg)) {
+    return handleAppMessage(socket, msg);
+  }
 
   const { type, requestId, ideaId, anonymousUserId } = msg;
   if (!ideaId || !isValidAnonymousId(anonymousUserId)) {
@@ -97,13 +68,50 @@ async function handle(socket: WebSocket, raw: unknown): Promise<void> {
     if (type === "chat") {
       const content = typeof msg.content === "string" ? msg.content.trim() : "";
       if (!content) {
-        return send(socket, { type: "error", requestId, code: "bad_request", message: "Message content is required" });
+        return send(socket, {
+          type: "error",
+          requestId,
+          code: "bad_request",
+          message: "Message content is required",
+        });
       }
       send(socket, { type: "chat.start", requestId, ideaId });
-      const result = await runChat(ideaId, anonymousUserId, content, (token) =>
-        send(socket, { type: "chat.delta", requestId, ideaId, token }),
+      const result = await runChat(
+        ideaId,
+        anonymousUserId,
+        content,
+        (token) => send(socket, { type: "chat.delta", requestId, ideaId, token }),
+        undefined,
+        (message) => send(socket, { type: "chat.progress", requestId, ideaId, message }),
+        msg.retry === true,
       );
       return send(socket, { type: "chat.done", requestId, ideaId, ...result });
+    }
+
+    if (type === "analyze") {
+      const analysisKey = `${anonymousUserId}:${ideaId}`;
+      if (activeInitialAnalyses.has(analysisKey)) {
+        return send(socket, {
+          type: "error",
+          requestId,
+          code: "analysis_in_progress",
+          message: "An automatic analysis is already running for this idea.",
+        });
+      }
+      activeInitialAnalyses.add(analysisKey);
+      try {
+        send(socket, { type: "analysis.start", requestId, ideaId });
+        const result = await runInitialAnalysis(
+          ideaId,
+          anonymousUserId,
+          (progress) => send(socket, { type: "analysis.progress", requestId, ideaId, ...progress }),
+          (title) => send(socket, { type: "analysis.title", requestId, ideaId, title }),
+          (token) => send(socket, { type: "analysis.delta", requestId, ideaId, token }),
+        );
+        return send(socket, { type: "analysis.done", requestId, ideaId, payload: result });
+      } finally {
+        activeInitialAnalyses.delete(analysisKey);
+      }
     }
 
     if (type === "research") {
@@ -116,26 +124,60 @@ async function handle(socket: WebSocket, raw: unknown): Promise<void> {
         });
       }
       send(socket, { type: "action.start", requestId, action: "research", ideaId });
-      const result = await runResearch(ideaId, anonymousUserId);
-      return send(socket, { type: "action.done", requestId, action: "research", ideaId, payload: result });
+      const result = await runResearch(
+        ideaId,
+        anonymousUserId,
+        undefined,
+        (message) =>
+          send(socket, {
+            type: "action.progress",
+            requestId,
+            action: "research",
+            ideaId,
+            message,
+          }),
+      );
+      return send(socket, {
+        type: "action.done",
+        requestId,
+        action: "research",
+        ideaId,
+        payload: result,
+      });
     }
 
     if (type === "prompt") {
       send(socket, { type: "action.start", requestId, action: "prompt", ideaId });
       const result = await runCreatePrompt(ideaId, anonymousUserId);
-      return send(socket, { type: "action.done", requestId, action: "prompt", ideaId, payload: result });
+      return send(socket, {
+        type: "action.done",
+        requestId,
+        action: "prompt",
+        ideaId,
+        payload: result,
+      });
     }
 
     if (type === "mvp") {
       send(socket, { type: "action.start", requestId, action: "mvp", ideaId });
       const result = await runCreateMvp(ideaId, anonymousUserId);
-      return send(socket, { type: "action.done", requestId, action: "mvp", ideaId, payload: result });
+      return send(socket, {
+        type: "action.done",
+        requestId,
+        action: "mvp",
+        ideaId,
+        payload: result,
+      });
     }
 
-    return send(socket, { type: "error", requestId, code: "bad_request", message: `Unknown message type: ${type}` });
+    return send(socket, {
+      type: "error",
+      requestId,
+      code: "bad_request",
+      message: `Unknown message type: ${type}`,
+    });
   } catch (err) {
     const { code, message } = classify(err);
-    // Sanitized log: code only, never the raw provider error (could carry secrets).
     console.error("[ideas-ws] %s failed code=%s", type, code);
     return send(socket, { type: "error", requestId, code, message });
   }
@@ -149,7 +191,6 @@ export function attachIdeasSocket(server: Server): WebSocketServer {
     send(socket, { type: "ready", capabilities: getCapabilities() });
 
     socket.on("message", (raw) => {
-      // Fire-and-forget; errors are reported to the client as `error` events.
       void handle(socket, raw);
     });
 

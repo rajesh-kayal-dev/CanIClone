@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { listCloneListApps } from "../controllers/clone-list.controller.js";
+import { listCloneListApps } from "../controllers/apps/clone-list.controller.js";
 
 const router = Router();
 router.get("/", listCloneListApps);

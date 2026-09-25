@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { Icons } from '@/components/icons';
 import { ThemeModeToggle } from '@/components/themes/theme-mode-toggle';
 import { ThemeSelector } from '@/components/themes/theme-selector';
-import { SearchBar } from '@/features/search/components/search-bar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
@@ -17,7 +16,7 @@ const NAV_LINKS = [
   { href: '/categories', label: 'categories', pathPrefix: '/categories' },
   { href: '/opportunities', label: 'opportunities', pathPrefix: '/opportunities' },
   { href: '/market', label: 'market', pathPrefix: '/market' },
-  { href: '/clone-list', label: 'clone list', pathPrefix: '/clone-list' },
+  { href: '/ideas', label: 'ideas', pathPrefix: '/ideas' },
 ];
 
 function DecorDots() {
@@ -92,13 +91,6 @@ export function SiteHeader() {
 
         {/* Right: Controls */}
         <div className='hidden md:flex items-center gap-4 font-mono text-[11px]'>
-          
-          {/* Search Box */}
-          <SearchBar
-            size='md'
-            placeholder='search an app...'
-            className='w-48 xl:w-56'
-          />
           
           {/* GitHub Button */}
           <a 

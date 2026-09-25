@@ -7,7 +7,7 @@ import {
   getIdeaHandler,
   listIdeasHandler,
   updateIdeaHandler,
-} from "../controllers/ideas.controller.js";
+} from "../controllers/ideas/ideas.controller.js";
 
 const router = Router();
 

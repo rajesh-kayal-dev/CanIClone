@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a reproducible problem in CanIClone
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not report security vulnerabilities here. Follow SECURITY.md for private reporting.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start the application...
+        2. Open...
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit or version
+      description: The branch, commit, or release where this occurs.
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include operating system, Node.js version, pnpm version, browser, database provider, and relevant optional integrations.
+      placeholder: |
+        OS:
+        Node.js:
+        pnpm:
+        Browser:
+        Database:
+        Provider integrations:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Add redacted logs or screenshots. Do not include credentials, database URLs, tokens, or private data.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that may help reproduce or understand the issue.

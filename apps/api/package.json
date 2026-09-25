@@ -14,7 +14,6 @@
   "dependencies": {
     "@caniclone/ai": "workspace:*",
     "@caniclone/database": "workspace:*",
-    "@caniclone/utils": "workspace:*",
     "@mendable/firecrawl-js": "^4.41.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

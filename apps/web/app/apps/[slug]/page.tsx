@@ -16,6 +16,7 @@ import { ReportEscape } from '@/features/app-report/components/report-escape';
 import { ReportRelated } from '@/features/app-report/components/report-related';
 import { ReportPricing } from '@/features/app-report/components/report-pricing';
 import { ReportFaq } from '@/features/app-report/components/report-faq';
+import { AppAssistantPanel } from '@/features/app-assistant/components/app-assistant-panel';
 
 export function generateMetadata({
   params
@@ -58,30 +59,34 @@ export default async function AppDetailPage({
     opportunityResult.status === 'fulfilled' ? opportunityResult.value : null;
 
   return (
-    <div className='mx-auto flex w-full max-w-4xl flex-col gap-14 px-4 py-10 sm:px-6 sm:py-14'>
-      <BackButton fallbackPath='/apps' />
+    <div className='mx-auto grid w-full max-w-[1560px] items-start gap-8 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-10'>
+      <div className='flex min-w-0 flex-col gap-10'>
+        <BackButton fallbackPath='/apps' />
 
-      <ReportHero app={app} />
+        <ReportHero app={app} />
 
-      <ReportPrompt app={app} />
+        <ReportPrompt app={app} />
 
-      <ReportWhyPay app={app} />
+        <ReportWhyPay app={app} />
 
-      <ReportLose app={app} />
+        <ReportLose app={app} />
 
-      <ReportSignal app={app} />
+        <ReportSignal app={app} />
 
-      <ReportActions app={app} />
+        <ReportActions app={app} />
 
-      {opportunity && <ReportOpportunity opportunity={opportunity} />}
+        {opportunity && <ReportOpportunity opportunity={opportunity} />}
 
-      <ReportEscape app={app} />
+        <ReportEscape app={app} />
 
-      <ReportRelated apps={related} />
+        <ReportRelated apps={related} />
 
-      <ReportPricing app={app} />
+        <ReportPricing app={app} />
 
-      <ReportFaq app={app} />
+        <ReportFaq app={app} />
+      </div>
+
+      <AppAssistantPanel app={app} />
     </div>
   );
 }

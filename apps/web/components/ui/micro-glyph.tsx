@@ -1,4 +1,3 @@
-import React from 'react';
 import { getGlyph } from './micro-glyphs';
 import { cn } from '@/lib/utils';
 

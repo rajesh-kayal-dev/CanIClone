@@ -1,5 +1,3 @@
-import React from 'react';
-
 import type { AppRecord } from '@/lib/api/types';
 import { AppIcon } from '@/features/app-report/components/app-icon';
 import { cn } from '@/lib/utils';

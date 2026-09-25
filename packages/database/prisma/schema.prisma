@@ -34,7 +34,7 @@ model App {
   relatedSlugs         Json?
 
   prompt        String?
-  promptCurated Boolean @default(false)
+  promptCurated Boolean                     @default(false)
   embedding     Unsupported("vector(384)")?
 
   pagePriority    Int     @default(3)
@@ -46,10 +46,11 @@ model App {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  pricingPlans PricingPlan[]
-  alternatives Alternative[]
-  aiAnalyses   AIAnalysis[]
-  marketTrend  MarketTrend?
+  pricingPlans       PricingPlan[]
+  alternatives       Alternative[]
+  aiAnalyses         AIAnalysis[]
+  appAIConversations AppAIConversation[]
+  marketTrend        MarketTrend?
 
   @@index([category])
   @@index([verdict])
@@ -144,9 +145,9 @@ model MarketTrend {
   currentInterest Int?
   averageInterest Int?
 
-  timelineData    Json?
-  regionalData    Json?
-  relatedQueries  Json?
+  timelineData   Json?
+  regionalData   Json?
+  relatedQueries Json?
 
   fetchedAt DateTime @default(now())
   createdAt DateTime @default(now())
@@ -175,7 +176,84 @@ model AnonymousUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ideas Idea[]
+  ideas              Idea[]
+  appAIConversations AppAIConversation[]
+}
+
+// ---------------------------------------------------------------------------
+// App AI workspace — one private anonymous conversation per application.
+// The public App record remains the shared factual source; conversation,
+// research, prompt refinements, and MVP documents belong to the viewer.
+// ---------------------------------------------------------------------------
+
+model AppAIConversation {
+  id              String   @id @default(cuid())
+  appId           String
+  anonymousUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  app           App             @relation(fields: [appId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser   @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  messages      AppAIMessage[]
+  research      AppAIResearch[]
+  prompts       AppAIPrompt[]
+  mvps          AppAIMvp[]
+
+  @@unique([appId, anonymousUserId])
+  @@index([anonymousUserId])
+}
+
+model AppAIMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  kind           String   @default("chat")
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model AppAIResearch {
+  id             String   @id @default(cuid())
+  conversationId String
+  query          String
+  results        Json?
+  analysis       String?
+  status         String   @default("complete")
+  createdAt      DateTime @default(now())
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model AppAIPrompt {
+  id             String   @id @default(cuid())
+  conversationId String
+  content        String
+  accepted       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, updatedAt])
+}
+
+model AppAIMvp {
+  id             String   @id @default(cuid())
+  conversationId String
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, updatedAt])
 }
 
 enum IdeaSource {
@@ -189,7 +267,7 @@ enum IdeaStatus {
 }
 
 model Idea {
-  id              String     @id @default(cuid())
+  id              String @id @default(cuid())
   anonymousUserId String
 
   title       String?
@@ -226,9 +304,9 @@ model AIMessage {
   ideaId String
 
   // role: user | assistant | system | tool
-  role String
+  role    String
   // kind: chat | analysis | research | challenge | prompt | mvp
-  kind    String  @default("chat")
+  kind    String @default("chat")
   content String
 
   createdAt DateTime @default(now())

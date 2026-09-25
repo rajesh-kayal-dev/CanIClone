@@ -1,13 +1,8 @@
 import http from "http";
-import dotenv from "dotenv";
 
-dotenv.config({
-  path: "../../.env",
-});
+import { loadApiEnvironment } from "./config/env.js";
 
-dotenv.config({
-  path: "../../packages/database/.env",
-});
+loadApiEnvironment();
 
 const { default: app } = await import("./server.js");
 const { attachIdeasSocket } = await import("./ws/ideas.socket.js");
@@ -20,5 +15,5 @@ attachIdeasSocket(server);
 
 server.listen(PORT, () => {
   console.log(`CanIClone API running on http://localhost:${PORT}`);
-  console.log(`CanIClone Ideas WebSocket on ws://localhost:${PORT}/ws`);
+  console.log(`CanIClone AI WebSocket on ws://localhost:${PORT}/ws`);
 });

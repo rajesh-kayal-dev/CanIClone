@@ -8,7 +8,7 @@ import {
   listCategories,
   listRelatedApps,
   search,
-} from "../controllers/apps.controller.js";
+} from "../controllers/apps/apps.controller.js";
 
 const router = Router();
 

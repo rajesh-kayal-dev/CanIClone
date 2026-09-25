@@ -1,20 +1,21 @@
-import { generateText, streamText } from "ai";
-
-import { getAnalysisModel } from "../models.js";
+import { generateAIText, streamAIText } from "../models.js";
 import {
   buildIdeaChatMessages,
+  buildIdeaInitialAnalysisPrompt,
+  buildIdeaTitlePrompt,
   buildMvpGenerationInput,
   buildPromptGenerationInput,
   buildResearchQueryPrompt,
   buildResearchSynthesisPrompt,
   type ChatTurn,
   type IdeaContext,
+  type IdeaResearchEvidence,
 } from "../prompts/idea.js";
 
 /**
- * Real Mistral calls for the Ideas workspace. These intentionally do NOT catch or
- * fake provider errors — a rate limit / auth failure propagates so the caller can
- * surface an honest "AI unavailable" state instead of a fabricated answer.
+ * Real direct-provider AI calls for the Ideas workspace. The shared provider
+ * boundary tries Gemini first and Groq second without exposing that choice to
+ * the product layer.
  */
 
 export interface StreamChatOptions {
@@ -28,28 +29,54 @@ export interface StreamChatOptions {
 /** Stream an assistant chat reply, returning the full text once complete. */
 export async function streamIdeaChat(opts: StreamChatOptions): Promise<string> {
   const { system, messages } = buildIdeaChatMessages(opts.context, opts.history);
-  const result = streamText({
-    model: getAnalysisModel(),
+  return streamAIText({
     system,
     messages,
-    maxRetries: 0,
-    abortSignal: opts.signal,
+    onToken: opts.onToken,
+    signal: opts.signal,
+    emptyResponseMessage: "Model returned an empty response",
   });
-  let full = "";
-  // Consume fullStream (not textStream) so provider errors — e.g. a Mistral rate
-  // limit — surface as a thrown error instead of an silently empty completion.
-  for await (const part of result.fullStream) {
-    if (part.type === "text-delta") {
-      full += part.text;
-      opts.onToken(part.text);
-    } else if (part.type === "error") {
-      throw part.error instanceof Error ? part.error : new Error(String(part.error));
-    }
-  }
-  if (!full.trim()) {
-    throw new Error("Model returned an empty response");
-  }
-  return full;
+}
+
+export interface IdeaTitleOptions {
+  context: IdeaContext;
+  signal?: AbortSignal;
+}
+
+/** Generate a short, specific name for an idea using the shared AI model. */
+export async function generateIdeaTitle(opts: IdeaTitleOptions): Promise<string> {
+  const { system, prompt } = buildIdeaTitlePrompt(opts.context);
+  const text = await generateAIText({ system, prompt, signal: opts.signal });
+
+  const title = text
+    .split(/\r?\n/, 1)[0]
+    .trim()
+    .replace(/^["'#*_`\s]+/, "")
+    .replace(/["'`]+$/, "")
+    .trim();
+  if (!title) throw new Error("Model returned an empty idea name");
+  return title.slice(0, 80).trim();
+}
+
+export interface StreamInitialAnalysisOptions {
+  context: IdeaContext;
+  research: IdeaResearchEvidence;
+  onToken: (token: string) => void;
+  signal?: AbortSignal;
+}
+
+/** Stream the structured first analysis after real research (or an honest fallback). */
+export async function streamIdeaInitialAnalysis(
+  opts: StreamInitialAnalysisOptions,
+): Promise<string> {
+  const { system, prompt } = buildIdeaInitialAnalysisPrompt(opts.context, opts.research);
+  return streamAIText({
+    system,
+    prompt,
+    onToken: opts.onToken,
+    signal: opts.signal,
+    emptyResponseMessage: "Model returned an empty analysis",
+  });
 }
 
 export interface GenerateOptions {
@@ -61,27 +88,13 @@ export interface GenerateOptions {
 /** Generate the improved development prompt for an idea. */
 export async function generateIdeaPrompt(opts: GenerateOptions): Promise<string> {
   const { system, prompt } = buildPromptGenerationInput(opts.context, opts.conversation ?? "");
-  const { text } = await generateText({
-    model: getAnalysisModel(),
-    system,
-    prompt,
-    maxRetries: 0,
-    abortSignal: opts.signal,
-  });
-  return text.trim();
+  return (await generateAIText({ system, prompt, signal: opts.signal })).trim();
 }
 
 /** Generate the MVP.md document for an idea. */
 export async function generateIdeaMvp(opts: GenerateOptions): Promise<string> {
   const { system, prompt } = buildMvpGenerationInput(opts.context, opts.conversation ?? "");
-  const { text } = await generateText({
-    model: getAnalysisModel(),
-    system,
-    prompt,
-    maxRetries: 0,
-    abortSignal: opts.signal,
-  });
-  return text.trim();
+  return (await generateAIText({ system, prompt, signal: opts.signal })).trim();
 }
 
 /** Synthesize Firecrawl research results into the honest challenge/assessment. */
@@ -91,14 +104,7 @@ export async function synthesizeResearch(
   signal?: AbortSignal,
 ): Promise<string> {
   const { system, prompt } = buildResearchSynthesisPrompt(context, resultsText);
-  const { text } = await generateText({
-    model: getAnalysisModel(),
-    system,
-    prompt,
-    maxRetries: 0,
-    abortSignal: signal,
-  });
-  return text.trim();
+  return (await generateAIText({ system, prompt, signal })).trim();
 }
 
 /** Turn the idea into a single concise web-search query for Firecrawl. */
@@ -107,13 +113,7 @@ export async function generateResearchQuery(
   signal?: AbortSignal,
 ): Promise<string> {
   const { system, prompt } = buildResearchQueryPrompt(context);
-  const { text } = await generateText({
-    model: getAnalysisModel(),
-    system,
-    prompt,
-    maxRetries: 0,
-    abortSignal: signal,
-  });
+  const text = await generateAIText({ system, prompt, signal });
   // Keep only the first non-empty line, in case the model adds prose.
-  return text.split("\n").map((l) => l.trim()).find((l) => l.length > 0)?.slice(0, 300) ?? "";
+  return text.split("\n").map((line) => line.trim()).find((line) => line.length > 0)?.slice(0, 300) ?? "";
 }

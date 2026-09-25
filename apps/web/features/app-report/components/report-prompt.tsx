@@ -1,6 +1,6 @@
 import type { AppRecord } from '@/lib/api/types';
 
-import { PromptActions } from './prompt-actions';
+import { PromptActions } from '@/features/ai-workspace/components/prompt-actions';
 import { ReportLabel } from './report-label';
 
 export function ReportPrompt({ app }: { app: AppRecord }) {

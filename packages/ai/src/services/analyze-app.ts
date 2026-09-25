@@ -1,7 +1,7 @@
 import { prisma } from "@caniclone/database";
 import { generateObject } from "ai";
 
-import { getAnalysisModel, getAnalysisModelId } from "../models.js";
+import { getAnalysisModelId, withAIModelFallback } from "../models.js";
 import { buildAppAnalysisPrompt, prepareAnalysisInput } from "../prompts/app-analysis.js";
 import { AppAnalysisSchema, type AppAnalysis } from "../schemas/app-analysis.js";
 
@@ -72,21 +72,22 @@ export async function getCachedAnalysis(slug: string): Promise<StoredAnalysis | 
   return rowToStoredAnalysis(row);
 }
 
-/** Generate a fresh analysis with Mistral, validate it, and persist it. */
+/** Generate a fresh analysis with the shared AI model, validate it, and persist it. */
 export async function generateAnalysis(slug: string): Promise<StoredAnalysis> {
   const app = await findApp(slug);
 
   const input = prepareAnalysisInput(app as unknown as Record<string, unknown>);
   const { system, prompt } = buildAppAnalysisPrompt(input);
 
-  const { object } = await generateObject({
-    model: getAnalysisModel(),
-    schema: AppAnalysisSchema,
-    system,
-    prompt,
-    // Fail fast on provider rate limits instead of hammering the API.
-    maxRetries: 1,
-  });
+  const { object } = await withAIModelFallback((model) =>
+    generateObject({
+      model,
+      schema: AppAnalysisSchema,
+      system,
+      prompt,
+      maxRetries: 0,
+    }),
+  );
 
   // Re-validate defensively so a malformed model response never reaches the DB.
   const analysis = AppAnalysisSchema.parse(object);
