@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) }
     : {}),
   title: {
-    default: 'Can I clone this?',
+    default: 'canIclone',
     template: '%s'
   },
   description:
