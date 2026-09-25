@@ -1,17 +1,10 @@
-import { apiFetch } from './client';
+import { cachedApiFetch } from './client';
 import {
   getCategoryBySlug,
+  type CategoryRecord,
 } from '@/features/categories/data/categories';
-import type { CategoryRecord } from '@/features/categories/data/categories';
-import type { ApiListApp } from './types';
+import type { ApiCategoryStat } from './types';
 import { humanizeSlug } from './format';
-
-let _appsCache: ApiListApp[] | null = null;
-
-async function fetchApps(): Promise<ApiListApp[]> {
-  if (!_appsCache) _appsCache = await apiFetch<ApiListApp[]>('/api/apps');
-  return _appsCache;
-}
 
 export interface SampleApp {
   slug: string;
@@ -24,66 +17,66 @@ export interface CategoryWithCount {
   name: string;
   description: string;
   appCount: number;
-  sampleApps?: SampleApp[];
+  sampleApps: SampleApp[];
 }
 
 function categoryMeta(slug: string): CategoryRecord | undefined {
   return getCategoryBySlug(slug);
 }
 
+function toCategoryWithCount(category: ApiCategoryStat): CategoryWithCount {
+  const meta = categoryMeta(category.slug);
+  return {
+    slug: category.slug,
+    name: meta?.name ?? humanizeSlug(category.slug),
+    description:
+      meta?.description ?? `Browse apps in ${humanizeSlug(category.slug)}.`,
+    appCount: category.appCount,
+    sampleApps: category.sampleApps ?? [],
+  };
+}
+
 export async function fetchAllCategorySlugs(): Promise<string[]> {
-  return apiFetch<string[]>('/api/apps/categories');
+  const categories = await cachedApiFetch<ApiCategoryStat[]>(
+    '/api/apps/categories',
+    300,
+    ['categories'],
+  );
+  return categories.map((category) => category.slug);
 }
 
 /**
- * Returns all live categories with counts, sorted by count descending.
- * Merges static presentation metadata (name/description) with live data.
+ * Category cards are backed by one aggregate API query. It never downloads the
+ * app directory just to count cards or choose three sample logos.
  */
 export async function fetchCategoryStats(): Promise<CategoryWithCount[]> {
-  const slugs = await fetchAllCategorySlugs();
-  const apps = await fetchApps();
-
-  const countMap: Record<string, number> = {};
-  const sampleAppsMap: Record<string, SampleApp[]> = {};
-
-  for (const a of apps) {
-    countMap[a.category] = (countMap[a.category] || 0) + 1;
-
-    if (!sampleAppsMap[a.category]) {
-      sampleAppsMap[a.category] = [];
-    }
-    if (sampleAppsMap[a.category].length < 3) {
-      sampleAppsMap[a.category].push({
-        slug: a.slug,
-        name: a.name,
-        domain: a.domain,
-      });
-    }
-  }
-
-  return slugs
-    .map((slug) => {
-      const meta = categoryMeta(slug);
-      return {
-        slug,
-        name: meta?.name ?? humanizeSlug(slug),
-        description: meta?.description ?? `Browse apps in ${humanizeSlug(slug)}.`,
-        appCount: countMap[slug] || 0,
-        sampleApps: sampleAppsMap[slug] || [],
-      };
-    })
-    .sort((a, b) => b.appCount - a.appCount);
+  const categories = await cachedApiFetch<ApiCategoryStat[]>(
+    '/api/apps/categories',
+    300,
+    ['categories'],
+  );
+  return categories.map(toCategoryWithCount);
 }
 
-/**
- * Returns the top N categories by app count, with static metadata merged in.
- */
+export async function fetchCategoryBySlug(
+  slug: string,
+): Promise<CategoryWithCount | null> {
+  try {
+    const category = await cachedApiFetch<ApiCategoryStat>(
+      `/api/apps/categories/${encodeURIComponent(slug)}`,
+      300,
+      ['categories', `category:${slug}`],
+    );
+    return toCategoryWithCount(category);
+  } catch {
+    return null;
+  }
+}
+
 export async function getTopCategories(limit = 8): Promise<CategoryWithCount[]> {
-  const all = await fetchCategoryStats();
-  return all.slice(0, limit);
+  return (await fetchCategoryStats()).slice(0, limit);
 }
 
 export async function isCategoryValid(slug: string): Promise<boolean> {
-  const slugs = await fetchAllCategorySlugs();
-  return slugs.includes(slug);
+  return (await fetchCategoryBySlug(slug)) !== null;
 }

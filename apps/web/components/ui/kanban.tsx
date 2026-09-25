@@ -1005,7 +1005,10 @@ function KanbanOverlay(props: KanbanOverlayProps) {
 
   const [mounted, setMounted] = React.useState(false);
 
-  React.useLayoutEffect(() => setMounted(true), []);
+  React.useLayoutEffect(() => {
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const container = containerProp ?? (mounted ? globalThis.document?.body : null);
 

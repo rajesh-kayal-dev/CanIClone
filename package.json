@@ -3,11 +3,16 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "db:generate": "pnpm --filter @caniclone/database db:generate",
+    "predev": "pnpm db:generate && pnpm --filter @caniclone/database build && pnpm --filter @caniclone/ai build",
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "turbo build --concurrency=1",
     "import:apps": "tsx scripts/import-apps.ts",
     "market:sync:trends": "pnpm --filter @caniclone/api market:sync:trends",
-    "embed:apps": "tsx scripts/generate-embeddings.ts"
+    "embed:apps": "tsx scripts/generate-embeddings.ts",
+    "test:hybrid": "tsx scripts/test-hybrid-search.ts",
+    "typecheck": "tsc -p apps/web/tsconfig.json --noEmit && pnpm --filter @caniclone/api build",
+    "lint": "pnpm --filter @caniclone/web lint"
   },
   "packageManager": "pnpm@10.33.0",
   "devDependencies": {

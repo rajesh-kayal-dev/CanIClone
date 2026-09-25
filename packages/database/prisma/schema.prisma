@@ -34,7 +34,7 @@ model App {
   relatedSlugs         Json?
 
   prompt        String?
-  promptCurated Boolean @default(false)
+  promptCurated Boolean                     @default(false)
   embedding     Unsupported("vector(384)")?
 
   pagePriority    Int     @default(3)
@@ -43,15 +43,14 @@ model App {
 
   voteCount Int @default(0)
 
-  embedding Unsupported("vector(384)")?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  pricingPlans PricingPlan[]
-  alternatives Alternative[]
-  aiAnalyses   AIAnalysis[]
-  marketTrend  MarketTrend?
+  pricingPlans       PricingPlan[]
+  alternatives       Alternative[]
+  aiAnalyses         AIAnalysis[]
+  appAIConversations AppAIConversation[]
+  marketTrend        MarketTrend?
 
   @@index([category])
   @@index([verdict])
@@ -105,6 +104,9 @@ model AIAnalysis {
   id    String @id @default(cuid())
   appId String
 
+  verdict  String?
+  analysis Json?
+
   buildabilityScore Int?
   complexity        String?
   estimatedEffort   String?
@@ -143,9 +145,9 @@ model MarketTrend {
   currentInterest Int?
   averageInterest Int?
 
-  timelineData    Json?
-  regionalData    Json?
-  relatedQueries  Json?
+  timelineData   Json?
+  regionalData   Json?
+  relatedQueries Json?
 
   fetchedAt DateTime @default(now())
   createdAt DateTime @default(now())
@@ -161,4 +163,202 @@ model MarketCache {
   fetchedAt DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Ideas module — anonymous, login-free idea workspace with an AI conversation.
+// AnonymousUser 1─* Idea 1─* {AIMessage, Research, Prompt, Mvp}. Every child
+// relation cascades on delete so removing an idea removes its whole workspace.
+// ---------------------------------------------------------------------------
+
+model AnonymousUser {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ideas              Idea[]
+  appAIConversations AppAIConversation[]
+}
+
+// ---------------------------------------------------------------------------
+// App AI workspace — one private anonymous conversation per application.
+// The public App record remains the shared factual source; conversation,
+// research, prompt refinements, and MVP documents belong to the viewer.
+// ---------------------------------------------------------------------------
+
+model AppAIConversation {
+  id              String   @id @default(cuid())
+  appId           String
+  anonymousUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  app           App             @relation(fields: [appId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser   @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  messages      AppAIMessage[]
+  research      AppAIResearch[]
+  prompts       AppAIPrompt[]
+  mvps          AppAIMvp[]
+
+  @@unique([appId, anonymousUserId])
+  @@index([anonymousUserId])
+}
+
+model AppAIMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  kind           String   @default("chat")
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model AppAIResearch {
+  id             String   @id @default(cuid())
+  conversationId String
+  query          String
+  results        Json?
+  analysis       String?
+  status         String   @default("complete")
+  createdAt      DateTime @default(now())
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model AppAIPrompt {
+  id             String   @id @default(cuid())
+  conversationId String
+  content        String
+  accepted       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, updatedAt])
+}
+
+model AppAIMvp {
+  id             String   @id @default(cuid())
+  conversationId String
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation AppAIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, updatedAt])
+}
+
+enum IdeaSource {
+  USER
+  RESEARCH
+}
+
+enum IdeaStatus {
+  DRAFT
+  SAVED
+}
+
+model Idea {
+  id              String @id @default(cuid())
+  anonymousUserId String
+
+  title       String?
+  description String?
+  source      IdeaSource @default(USER)
+  status      IdeaStatus @default(DRAFT)
+
+  // Latest generated development prompt (denormalized snapshot for quick display).
+  prompt String?
+
+  targetUsers String?
+  purpose     String?
+  budget      String?
+  technology  String?
+
+  // Latest research analysis snapshot; full history lives in `researchRecords`.
+  research String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  anonymousUser   AnonymousUser @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  messages        AIMessage[]
+  researchRecords Research[]
+  prompts         Prompt[]
+  mvps            Mvp[]
+
+  @@index([anonymousUserId])
+  @@index([status])
+}
+
+model AIMessage {
+  id     String @id @default(cuid())
+  ideaId String
+
+  // role: user | assistant | system | tool
+  role    String
+  // kind: chat | analysis | research | challenge | prompt | mvp
+  kind    String @default("chat")
+  content String
+
+  createdAt DateTime @default(now())
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+model Research {
+  id     String @id @default(cuid())
+  ideaId String
+
+  query    String
+  // Raw Firecrawl results (urls, titles, snippets, markdown).
+  results  Json?
+  // Mistral's synthesized analysis / challenge over the results.
+  analysis String?
+  status   String  @default("complete")
+
+  createdAt DateTime @default(now())
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+model Prompt {
+  id     String @id @default(cuid())
+  ideaId String
+
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+model Mvp {
+  id     String @id @default(cuid())
+  ideaId String
+
+  // Full MVP.md markdown document.
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  idea Idea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
 }

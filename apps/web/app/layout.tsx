@@ -20,8 +20,8 @@ export const metadata: Metadata = {
     ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) }
     : {}),
   title: {
-    default: "CanIClone!",
-    template: '%s | CanIClone'
+    default: 'Can I clone this?',
+    template: '%s'
   },
   description:
     'Discover and compare AI agents, tools, and applications. See what you can clone and build today.'

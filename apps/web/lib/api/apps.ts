@@ -1,6 +1,102 @@
-import { apiFetch, ApiError } from './client';
-import type { ApiListApp, ApiAppDetail, AppRecord } from './types';
-import { upperVerdict, confidenceToPercent, formatPricing, toOfficialUrl } from './format';
+import { apiFetch, ApiError, cachedApiFetch, getApiUrl } from './client';
+import type {
+  ApiAppDetail,
+  ApiCategoryStat,
+  ApiHybridSearchResult,
+  ApiListApp,
+  AppRecord,
+} from './types';
+import {
+  confidenceToPercent,
+  formatPricing,
+  toOfficialUrl,
+  upperVerdict,
+} from './format';
+
+export const APPS_PAGE_LIMIT = 10;
+
+export interface AppsPageParams {
+  page?: number;
+  limit?: number;
+  category?: string;
+  verdict?: string;
+  sort?: string;
+  q?: string;
+}
+
+export interface AppsPagination {
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+export interface AppsPageResult {
+  items: AppRecord[];
+  pagination: AppsPagination;
+}
+
+type AppRequestOptions = {
+  signal?: AbortSignal;
+  cached?: boolean;
+};
+
+function buildAppsQuery(params: AppsPageParams): string {
+  const qs = new URLSearchParams();
+  qs.set('limit', String(params.limit ?? APPS_PAGE_LIMIT));
+  if (params.page && params.page > 1) qs.set('page', String(params.page));
+  if (params.category && params.category !== 'all') qs.set('category', params.category);
+  if (params.verdict && params.verdict !== 'all') qs.set('verdict', params.verdict.toLowerCase());
+  if (params.sort) qs.set('sort', params.sort);
+  if (params.q?.trim()) qs.set('q', params.q.trim());
+  return qs.toString();
+}
+
+async function fetchAppsEnvelope(
+  params: AppsPageParams,
+  options: AppRequestOptions = {},
+  endpoint = '/api/apps',
+): Promise<AppsPageResult> {
+  const url = `${getApiUrl()}${endpoint}?${buildAppsQuery(params)}`;
+  const init: RequestInit & {
+    next?: { revalidate?: number; tags?: string[] };
+  } = options.cached
+    ? {
+        cache: 'force-cache',
+        next: { revalidate: 30, tags: ['apps'] },
+      }
+    : { cache: 'no-store' };
+  if (options.signal) init.signal = options.signal;
+
+  const res = await fetch(url, init);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(res.status, body?.message ?? `API ${res.status}`);
+  }
+  const json = await res.json();
+  const items = ((json.data ?? []) as ApiListApp[]).map(toListRecord);
+  const pagination: AppsPagination = json.pagination ?? {
+    page: 1,
+    limit: params.limit ?? APPS_PAGE_LIMIT,
+    total: items.length,
+    hasMore: false,
+  };
+  return { items, pagination };
+}
+
+export async function getAppsPage(
+  params: AppsPageParams = {},
+  options: AppRequestOptions = {},
+): Promise<AppsPageResult> {
+  return fetchAppsEnvelope(params, options);
+}
+
+export async function getCloneListPage(
+  params: AppsPageParams = {},
+  options: AppRequestOptions = {},
+): Promise<AppsPageResult> {
+  return fetchAppsEnvelope(params, options, '/api/clone-list');
+}
 
 function toListRecord(a: ApiListApp): AppRecord {
   return {
@@ -9,10 +105,17 @@ function toListRecord(a: ApiListApp): AppRecord {
     tagline: a.tagline ?? '',
     category: a.category,
     pricing: formatPricing(a.priceMonthly),
+    priceMonthly: a.priceMonthly,
     verdict: upperVerdict(a.verdict),
     confidence: confidenceToPercent(a.verdictConfidence),
     voteCount: a.voteCount ?? 0,
     pagePriority: a.pagePriority ?? 3,
+    alternativeCount: a.alternativeCount ?? 0,
+    popularityScore: a.popularityScore ?? 0,
+    marketDirection: a.marketDirection ?? null,
+    marketGrowth: a.marketGrowth ?? null,
+    marketInterest: a.marketInterest ?? null,
+    marketFetchedAt: a.marketFetchedAt ?? null,
     createdAt: a.createdAt,
     updatedAt: a.updatedAt,
     description: a.verdictSummary ?? '',
@@ -25,6 +128,13 @@ function toListRecord(a: ApiListApp): AppRecord {
     prompt: '',
     alternatives: [],
     tags: [],
+    whyPeopleStillPay: '',
+    moatNotes: '',
+    coreLoopDIY: '',
+    pricingPlans: [],
+    openSource: [],
+    priorArt: [],
+    verifiedOneShot: false,
   };
 }
 
@@ -39,45 +149,86 @@ function toDetailRecord(a: ApiAppDetail): AppRecord {
     moat: Array.isArray(a.moatTags) ? (a.moatTags as string[]) : [],
     diyTimeEstimate: a.diyTimeEstimate ?? '',
     prompt: a.prompt ?? '',
-    alternatives: Array.isArray(a.relatedSlugs) ? (a.relatedSlugs as string[]) : [],
+    alternatives: Array.isArray(a.relatedSlugs)
+      ? (a.relatedSlugs as string[])
+      : [],
     tags: [],
+    whyPeopleStillPay: a.whyPeopleStillPay ?? '',
+    moatNotes: a.moatNotes ?? '',
+    coreLoopDIY: a.coreLoopDIY ?? '',
+    pricingPlans: Array.isArray(a.pricingPlans)
+      ? a.pricingPlans.map((p) => ({
+          name: p.name,
+          monthly: p.monthly,
+          annualPerMonth: p.annualPerMonth,
+          per: p.per,
+          limits: p.limits,
+          notes: p.notes,
+        }))
+      : [],
+    openSource: Array.isArray(a.alternatives)
+      ? a.alternatives.map((alt) => ({
+          name: alt.name,
+          url: alt.url,
+          repo: alt.repo,
+          description: alt.description,
+          stars: alt.stars,
+          lastCommit: alt.lastCommit,
+          selfHost: alt.selfHost,
+          type: alt.type,
+        }))
+      : [],
+    priorArt: Array.isArray(a.priorArt)
+      ? (a.priorArt as Record<string, unknown>[])
+          .map((p) => ({
+            name: String(p.name ?? ''),
+            url: String(p.url ?? ''),
+            desc: String(p.desc ?? ''),
+            status: p.status ? String(p.status) : null,
+          }))
+          .filter((p) => p.name || p.url)
+      : [],
+    verifiedOneShot: Boolean(a.verifiedOneShot),
   };
 }
 
-let _appsCache: ApiListApp[] | null = null;
-
-async function fetchApps(): Promise<ApiListApp[]> {
-  if (!_appsCache) _appsCache = await apiFetch<ApiListApp[]>('/api/apps');
-  return _appsCache;
-}
-
+/** The first page is intentionally the only directory data fetched by default. */
 export async function getApps(): Promise<AppRecord[]> {
-  const apps = await fetchApps();
-  return apps.map(toListRecord);
+  return (await getAppsPage({ limit: APPS_PAGE_LIMIT }, { cached: true })).items;
 }
 
 export async function getAppCount(): Promise<number> {
-  const apps = await fetchApps();
-  return apps.length;
+  const result = await cachedApiFetch<{ count: number }>('/api/apps/stats', 120, [
+    'apps',
+  ]);
+  return result.count;
 }
 
-import { getTrendingScore } from '../ranking';
-
-export async function getTrendingApps(limit = 15): Promise<AppRecord[]> {
-  const apps = await fetchApps();
-  const records = apps.map(toListRecord);
-  return [...records].sort((a, b) => getTrendingScore(b) - getTrendingScore(a)).slice(0, limit);
+export async function getTrendingApps(limit = 10): Promise<AppRecord[]> {
+  return (
+    await getAppsPage(
+      { limit: Math.min(50, Math.max(1, limit)), sort: 'trending' },
+      { cached: true },
+    )
+  ).items;
 }
 
-export async function getPopularApps(limit = 6): Promise<AppRecord[]> {
-  const apps = await fetchApps();
-  const sorted = [...apps].sort((a, b) => b.voteCount - a.voteCount).slice(0, limit);
-  return sorted.map(toListRecord);
+export async function getPopularApps(limit = 10): Promise<AppRecord[]> {
+  return (
+    await getAppsPage(
+      { limit: Math.min(50, Math.max(1, limit)), sort: 'popular' },
+      { cached: true },
+    )
+  ).items;
 }
 
 export async function getAppBySlug(slug: string): Promise<AppRecord | null> {
   try {
-    const detail = await apiFetch<ApiAppDetail>(`/api/apps/${encodeURIComponent(slug)}`);
+    const detail = await cachedApiFetch<ApiAppDetail>(
+      `/api/apps/${encodeURIComponent(slug)}`,
+      300,
+      [`app:${slug}`],
+    );
     return toDetailRecord(detail);
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null;
@@ -85,61 +236,67 @@ export async function getAppBySlug(slug: string): Promise<AppRecord | null> {
   }
 }
 
-export async function getAppsByCategory(categorySlug: string): Promise<AppRecord[]> {
-  const apps = await fetchApps();
-  return apps
-    .filter((a) => a.category === categorySlug)
-    .map(toListRecord);
+export async function getAppsByCategory(
+  categorySlug: string,
+  limit = APPS_PAGE_LIMIT,
+): Promise<AppRecord[]> {
+  return (
+    await getAppsPage(
+      { category: categorySlug, limit, sort: 'name' },
+      { cached: true },
+    )
+  ).items;
 }
 
 export async function countAppsByCategory(categorySlug: string): Promise<number> {
-  const apps = await fetchApps();
-  return apps.filter((a) => a.category === categorySlug).length;
+  const category = await cachedApiFetch<ApiCategoryStat>(
+    `/api/apps/categories/${encodeURIComponent(categorySlug)}`,
+    120,
+    ['categories'],
+  );
+  return category.appCount;
 }
 
-export async function getAlternatives(app: AppRecord, limit = 4): Promise<AppRecord[]> {
-  const all = await fetchApps();
-  const allMap = new Map(all.map((a) => [a.slug, a]));
-
-  const curated = (app.alternatives as string[])
-    .map((slug) => allMap.get(slug))
-    .filter((a): a is ApiListApp => !!a && a.slug !== app.slug)
-    .slice(0, limit);
-
-  if (curated.length >= limit) return curated.map(toListRecord);
-
-  const fill = all
-    .filter(
-      (a) =>
-        a.slug !== app.slug &&
-        !curated.some((c) => c.slug === a.slug)
-    )
-    .sort((a, b) => b.voteCount - a.voteCount)
-    .slice(0, limit - curated.length);
-
-  return [...curated, ...fill].map(toListRecord);
+/** Related rows are resolved by the API, not by loading all 996 apps here. */
+export async function getRelatedApps(
+  appOrSlug: AppRecord | string,
+  limit = 4,
+): Promise<AppRecord[]> {
+  const slug = typeof appOrSlug === 'string' ? appOrSlug : appOrSlug.slug;
+  const rows = await cachedApiFetch<ApiListApp[]>(
+    `/api/apps/${encodeURIComponent(slug)}/related?limit=${limit}`,
+    300,
+    [`app-related:${slug}`],
+  );
+  return rows.map(toListRecord);
 }
 
-export async function getRelatedApps(app: AppRecord, limit = 4): Promise<AppRecord[]> {
-  const all = await fetchApps();
-  const sameCategory = all
-    .filter((a) => a.slug !== app.slug && a.category === app.category)
-    .sort((a, b) => b.voteCount - a.voteCount);
-
-  const fill = all
-    .filter(
-      (a) =>
-        a.slug !== app.slug &&
-        !sameCategory.some((s) => s.slug === a.slug)
-    )
-    .sort((a, b) => b.voteCount - a.voteCount);
-
-  return [...sameCategory, ...fill].slice(0, limit).map(toListRecord);
+export async function getAlternatives(
+  app: AppRecord,
+  limit = 4,
+): Promise<AppRecord[]> {
+  return getRelatedApps(app, limit);
 }
 
-export async function searchApps(query: string): Promise<AppRecord[]> {
+export async function searchApps(
+  query: string,
+  limit = 20,
+  signal?: AbortSignal,
+): Promise<AppRecord[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
-  const apps = await apiFetch<ApiListApp[]>(`/api/apps/search?q=${encodeURIComponent(trimmed)}`);
-  return apps.map(toListRecord);
+  const rows = await apiFetch<ApiHybridSearchResult[]>(
+    `/api/apps/search?q=${encodeURIComponent(trimmed)}&limit=${Math.min(50, Math.max(1, limit))}`,
+    { signal },
+  );
+  return rows.map(toListRecord);
+}
+
+export async function searchSuggestions(
+  query: string,
+  signal?: AbortSignal,
+): Promise<AppRecord[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  return searchApps(trimmed, 5, signal);
 }

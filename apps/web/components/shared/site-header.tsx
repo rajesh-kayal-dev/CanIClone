@@ -14,8 +14,9 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 const NAV_LINKS = [
   { href: '/apps', label: 'apps', pathPrefix: '/apps' },
   { href: '/categories', label: 'categories', pathPrefix: '/categories' },
+  { href: '/opportunities', label: 'opportunities', pathPrefix: '/opportunities' },
   { href: '/market', label: 'market', pathPrefix: '/market' },
-  { href: '/apps', label: 'clone list', neverActive: true },
+  { href: '/ideas', label: 'ideas', pathPrefix: '/ideas' },
 ];
 
 function DecorDots() {
@@ -66,11 +67,9 @@ export function SiteHeader() {
           {/* Navigation */}
           <nav className='hidden md:flex items-center gap-8 font-mono text-[11px]' aria-label='Primary'>
             {NAV_LINKS.map((link, idx) => {
-              const isActive = link.neverActive 
-                ? false 
-                : link.pathPrefix 
-                  ? pathname === link.pathPrefix || pathname.startsWith(`${link.pathPrefix}/`)
-                  : pathname === link.href;
+              const isActive = link.pathPrefix
+                ? pathname === link.pathPrefix || pathname.startsWith(`${link.pathPrefix}/`)
+                : pathname === link.href;
               return (
                 <Link
                   key={`${link.label}-${idx}`}
@@ -93,20 +92,6 @@ export function SiteHeader() {
         {/* Right: Controls */}
         <div className='hidden md:flex items-center gap-4 font-mono text-[11px]'>
           
-          {/* Search Box */}
-          <Link 
-            href='/search' 
-            className='flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors border border-border/40 rounded-md px-2.5 py-1.5 bg-muted/20'
-          >
-            <div className="flex items-center gap-2">
-              <Icons.search className='size-3.5' />
-              <span>search an app...</span>
-            </div>
-            <div className="flex items-center gap-1 border border-border/40 bg-background/50 rounded px-1.5 py-0.5 text-[9px] ml-2 text-muted-foreground/70">
-              <span>⌘</span><span>K</span>
-            </div>
-          </Link>
-          
           {/* GitHub Button */}
           <a 
             href='https://github.com/rajesh-kayal-dev/CanIClone.git' 
@@ -117,16 +102,8 @@ export function SiteHeader() {
           >
             <Icons.github className='size-3.5 text-foreground' />
             GitHub
-            <span className='flex items-center gap-1 text-amber-500/80 ml-1'>
-              <Icons.star className='size-3 fill-amber-500/80' />
-              0
-            </span>
+            <Icons.star className='size-3 fill-amber-500/80' />
           </a>
-
-          {/* Sign In */}
-          <Link href='/auth/sign-in' className='text-muted-foreground hover:text-foreground transition-colors px-2'>
-            sign in
-          </Link>
 
           {/* Theme Widget */}
           <div className='flex items-center rounded-md border border-border/40 p-0.5 bg-muted/20'>
@@ -158,11 +135,9 @@ export function SiteHeader() {
                 <div className='flex flex-col gap-4'>
                   <span className='text-[10px] text-muted-foreground uppercase tracking-wider'>Navigation</span>
                   {NAV_LINKS.map((link, idx) => {
-                    const isActive = link.neverActive 
-                      ? false 
-                      : link.pathPrefix 
-                        ? pathname === link.pathPrefix || pathname.startsWith(`${link.pathPrefix}/`)
-                        : pathname === link.href;
+                    const isActive = link.pathPrefix
+                      ? pathname === link.pathPrefix || pathname.startsWith(`${link.pathPrefix}/`)
+                      : pathname === link.href;
                     return (
                       <Link
                         key={`${link.label}-${idx}`}
@@ -192,9 +167,6 @@ export function SiteHeader() {
                   >
                     <Icons.github className='size-4' /> GitHub
                   </a>
-                  <Link href='/auth/sign-in' onClick={() => setIsOpen(false)} className='text-muted-foreground'>
-                    sign in
-                  </Link>
                 </div>
 
                 <div className='h-px bg-border/60' />

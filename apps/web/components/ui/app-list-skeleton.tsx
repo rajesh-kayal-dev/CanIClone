@@ -1,6 +1,3 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
-
 export function AppListRowSkeleton() {
   return (
     <div className='flex items-center justify-between border-b border-border py-[6px] px-2'>

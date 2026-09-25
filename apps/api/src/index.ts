@@ -1,17 +1,19 @@
-import dotenv from "dotenv";
+import http from "http";
 
-dotenv.config({
-  path: "../../.env",
-});
+import { loadApiEnvironment } from "./config/env.js";
 
-dotenv.config({
-  path: "../../packages/database/.env",
-});
+loadApiEnvironment();
 
 const { default: app } = await import("./server.js");
+const { attachIdeasSocket } = await import("./ws/ideas.socket.js");
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 7000;
 
-app.listen(PORT, () => {
+// A real HTTP server (not app.listen) so the Ideas WebSocket can share the port.
+const server = http.createServer(app);
+attachIdeasSocket(server);
+
+server.listen(PORT, () => {
   console.log(`CanIClone API running on http://localhost:${PORT}`);
+  console.log(`CanIClone AI WebSocket on ws://localhost:${PORT}/ws`);
 });
