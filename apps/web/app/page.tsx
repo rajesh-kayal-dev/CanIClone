@@ -12,7 +12,7 @@ import { fetchCategoryStats } from '@/lib/api/categories';
 import { MicroGlyph } from '@/components/ui/micro-glyph';
 
 export const metadata: Metadata = {
-  title: 'Can I clone this?',
+  title: 'canIclone',
 };
 
 export default async function HomePage() {
