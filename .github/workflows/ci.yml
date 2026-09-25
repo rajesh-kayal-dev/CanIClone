@@ -36,6 +36,12 @@ jobs:
         # Keep the lockfile authoritative; CI must not rewrite it.
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client
+        env:
+          # Prisma config requires DIRECT_URL even for client generation.
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+        run: pnpm db:generate
+
       - name: Generate Next.js route types
         run: pnpm --filter @caniclone/web exec next typegen
 
